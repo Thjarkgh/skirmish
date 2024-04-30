@@ -1,0 +1,5 @@
+gamestate_after_hash = ""
+gamestate_before_hash = ""
+move = ""
+received_events = ["", "", "", "", "", "", "", ""]
+sending_events = ["", "", "", "", "", "", "", ""]
