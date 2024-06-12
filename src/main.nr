@@ -171,14 +171,14 @@ fn test_move_to() {
     let mut class = KNIGHT;
     let mut c = Character {
         id: 0,
-        x: &mut 2,
-        y: &mut 4,
-        status: &mut 0,
-        health: &mut 100,
-        class: &mut class,
-        has_been_seen: &mut 0,
-        target_x: &mut 0,
-        target_y: &mut 0,
+        x: 2,
+        y: 4,
+        status: 0,
+        health: 100,
+        class: class,
+        has_been_seen: 0,
+        target_x: 0,
+        target_y: 0,
         damage: 123,
     };
     let mut energy = 12;
@@ -267,6 +267,130 @@ fn get_data_hash(secret: [u8], characters: [u8], their_characters: [u8], traps: 
 }
 
 
+
+
+
+
+// #[test]
+// fn get_demo_game() {
+//     let mut c0 = get_test_my_character(0, 2, 2, ARCHER);
+//     let mut c1 = get_test_my_character(1, 2, 3, KNIGHT);
+//     let mut c2 = get_test_my_character(2, 2, 4, MAGE);
+//     let mut c3 = get_test_my_character(3, 2, 5, ROGUE);
+//     let mut c4 = get_test_my_character(4, 2, 6, RITUALIST);
+
+//     let mut e0 = get_test_their_character(0, 22, 2, UNKNOWN_CLASS);
+//     let mut e1 = get_test_their_character(1, 22, 3, UNKNOWN_CLASS);
+//     let mut e2 = get_test_their_character(2, 22, 4, UNKNOWN_CLASS);
+//     let mut e3 = get_test_their_character(3, 22, 5, UNKNOWN_CLASS);
+//     let mut e4 = get_test_their_character(4, 22, 6, UNKNOWN_CLASS);
+
+//     *c2.status = 2;
+
+//     // let my_traps = [0; 32];
+//     // let their_traps = [0; 32];
+//     let mut my_traps_result = parse_traps(0x0000ffff00000000000000000000000000000000000000000000000000000000);
+//     let mut my_traps = my_traps_result.value;
+//     let mut their_traps_result = parse_traps(0x0000ffff00000000000000000000000000000000000000000000000000000000);
+//     let mut their_traps = their_traps_result.value;
+//     //let mut map = get_test_map([c0, c1, c2, c3, c4], [e0, e1, e2, e3, e4], my_traps, their_traps);
+
+//     let mut map = get_test_map(
+//         [c0, c1, c2, c3, c4], //[get_test_my_character(0, 2, 2, ROGUE), get_test_my_character(1, 2, 3, KNIGHT), get_test_my_character(2, 2, 4, MAGE), get_test_my_character(3, 2, 5, RITUALIST), get_test_my_character(4, 2, 6, ARCHER)],
+//         [e0, e1, e2, e3, e4], //[get_test_their_character(0, 22, 2, UNKNOWN_CLASS), get_test_their_character(1, 22, 3, UNKNOWN_CLASS), get_test_their_character(2, 22, 4, UNKNOWN_CLASS), get_test_their_character(3, 22, 5, UNKNOWN_CLASS), get_test_their_character(4, 22, 6, UNKNOWN_CLASS)],
+//         [Trap { x: 255, y: 255, sprung: &mut 0, damage: 0 }; TRAPS_BUFFER_SIZE], /// TODO: using my_traps here causes exception on compile
+//         [Trap { x: 255, y: 255, sprung: &mut 0, damage: 0 }; TRAPS_BUFFER_SIZE],
+//     );
+
+//     let game = Game {
+//         my_chars: [&mut c0, &mut c1, &mut c2, &mut c3, &mut c4],
+//         their_chars: [&mut e0, &mut e1, &mut e2, &mut e3, &mut e4],
+//         traps: &mut my_traps,
+//         searched_traps: &mut their_traps,
+//         map: map,
+//         events: &mut [0; MAX_EVENTS],
+//         events_count: &mut 0,
+//         won: &mut false,
+//         lost: &mut false,
+//         trap_count: &mut my_traps_result.count,
+//         searched_trap_count: &mut their_traps_result.count,
+//     };
+
+//     let map_after = [
+//         game.map._data[0].map(|cell| *cell),
+//         game.map._data[1].map(|cell| *cell),
+//         game.map._data[2].map(|cell| *cell),
+//         game.map._data[3].map(|cell| *cell),
+//         game.map._data[4].map(|cell| *cell),
+//         game.map._data[5].map(|cell| *cell),
+//         game.map._data[6].map(|cell| *cell),
+//         game.map._data[7].map(|cell| *cell),
+//         game.map._data[8].map(|cell| *cell),
+//         game.map._data[9].map(|cell| *cell),
+//     ];
+//     assert(map_after.len() == 10);
+//     for i in 0..10 {
+//         assert(map_after[i].len() == 32);
+//     }
+//     let my_chars_after = game.serialize_my_chars();
+//     assert(my_chars_after.success);
+//     let their_chars_after = game.serialize_their_chars();
+//     assert(their_chars_after.success);
+//     let traps_after = serialize_traps(game.get_trap_count() as u8, *game.traps);
+//     let searched_traps_after = serialize_traps(game.get_their_trap_count() as u8, *game.searched_traps);
+
+//     let my_chars = my_chars_after.value;
+//     let their_chars = their_chars_after.value;
+
+//     assert(map_after[2][22] == UNKNOWN_CLASS_TILE);
+
+//     let secret: Field = 1234567890;
+//     let new_hash_array = get_data_hash(secret.to_be_bytes(32), my_chars_after.value.to_be_bytes(32), their_chars.to_be_bytes(32), traps_after.to_be_bytes(32), [
+//         [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
+//         [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
+//         [0, 0, ARCHER, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
+//         [WALL, WALL, KNIGHT,WALL, WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, WALL, EMPTY,WALL, WALL],
+//         [WALL, EMPTY,MAGE,  EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
+//         [WALL, EMPTY,ROGUE,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
+//         [WALL, WALL, RITUALIST,WALL, WALL, 0, 0, EMPTY,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, EMPTY,0, 0, WALL, WALL, EMPTY,WALL, WALL],
+//         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+//         [0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0],
+//         [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
+//     ], searched_traps_after.to_be_bytes(32));
+//     let new_hash = std::field::bytes32_to_field(new_hash_array);
+
+//     assert(new_hash == 0x0716ac88cc4d1abab6ed2c00278573908bc1b360c955eab19e5822c1d107cdcc, f"hash: {new_hash}, secret: {secret}, my_chars: {my_chars}, their_chars: {their_chars}, traps: {traps_after}, searched_traps: {searched_traps_after}");
+// }
+
+
+
+struct Test {
+    a: u8,
+    b: u8,
+}
+
+impl Test {
+    fn set_a(&mut self, a: u8) {
+        self.a = a;
+    }
+    fn set_b(&mut self, b: u8) {
+        self.b = b;
+    }
+    fn new(a: u8, b: u8) -> Test {
+        Test { a: a, b: b }
+    }
+}
+
+fn t(t: &mut Test, a: pub u8, b: pub u8) {
+    //let t = Test { a: &mut orig_a, b: &mut orig_b };
+
+    t.set_a(a);
+    t.set_b(b);
+
+    assert(t.a == a);
+    assert(t.b == b);
+}
+
 fn main(
     secret: Field,
     my_characters: Field,
@@ -294,319 +418,284 @@ fn main(
     let actor_id = get_actor_from_move(move);
     assert(actor_id < 5);
 
-    let mut game = Game::build(my_characters, their_characters, traps, searched_traps, map_old);
+    let Result { value: mut game, success: parse_game_success } = Game::build(my_characters, their_characters, traps, searched_traps, map_old);
+    assert(parse_game_success);
+
+    assert(game.won == false);
+    assert(game.lost == false);
+    //assert(game.my_chars[2].get_status() == 2);
+//     // println(game.my_chars[2].get_status());
 
     for i in 0..MAX_EVENTS {
         let event = parse_event(received_events[i]);
         assert(event.process(&mut game));
     }
+//     //println(game.my_chars[2].get_status());
 
-    //let mut actor = &mut game.my_chars[actor_id];
-    // let class = actor.get_class();
-    // let id = actor.get_id();
-    // assert(1 == 2,f"{id} {class}");
-    // assert(actor_result.success);
-    // let mut actor = actor_result.value;
-    let mut game_events = game.events.map(|event| event);
-    let mut energy: u8 = 12;
-    for j in 0..5 {
-        let split = actions[j].to_be_bytes(32);
-        let action = split[1];
-        let move_to_result = move_to(game.map, game.my_chars[actor_id], &mut energy, split[3], split[4], action == MOVE);
-        let sneak_result = sneak_to(game.map, game.my_chars[actor_id], &mut energy, split[3], split[4], action == SNEAK);
-        let mut ec = *game.events_count;
-        let mut tc = *game.trap_count;
-        let new_trap = Trap { x: split[3], y: split[4], sprung: &mut 0, damage: 64 };
-        if action == SNEAK {
-            // hide: y|x|actor|0
-            assert(split[2] == actor_id); // for the most parts, only current actor may do stuff
-            assert(sneak_result);
-            // assert(game.add_event(sneak_result.value));
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == MOVE {
-            // movey|x|actor|0
-            assert(split[2] == actor_id);// for the most parts, only current actor may do stuff
-            //action_event_result = move_to(game.map, actor, &mut energy, split[3], split[4]);
-            assert(move_to_result.success);
-            // assert(game.add_event(move_to_result.value));
-        game_events[ec & EVENTS_BUFFER_MASK] = move_to_result.value;
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == RITUAL {
-            assert(split[2] == game.my_chars[actor_id].id); // for the most parts, only current actor may do stuff
-            assert(game.my_chars[actor_id].get_class() == RITUALIST);
-            assert(energy == 12);
-            energy = 0;
-            if game.my_chars[actor_id].get_status() < 7 {
-                *game.my_chars[actor_id].status += 1;
-        game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(RITUAL, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_std_event(RITUAL, actor.id, actor.get_x(), actor.get_y())));
-            } else {
-        game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(WIN, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_std_event(WIN, actor.id, actor.get_x(), actor.get_y())));
-            }
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == SEARCH {
-            assert(split[2] == game.my_chars[actor_id].id);
-            assert(game.my_chars[actor_id].get_class() == ROGUE);
-            let x = split[3];
-            let y = split[4];
-            assert(x < WIDTH);
-            assert(y < HEIGHT);
-            assert(energy >= 6);
-            let is_neighbor_result = Map::is_neighbor(game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), x, y);
-            assert(is_neighbor_result.success);
-            assert(is_neighbor_result.value);
-            // assert(((x == actor.x) & ((y == actor.y + 1) | (y == actor.y - 1))) | ((y == actor.x) & ((x == actor.x + 1) | (x == actor.x - 1))));
-            // assert(game.add_event(build_std_event(NO_EVENT, 0, 0, 0)));
-            energy -= 6;
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == CAST_FIREBALL {
-            assert(split[2] == game.my_chars[actor_id].id);// for the most parts, only current actor may do stuff
-            assert(game.my_chars[actor_id].get_class() == MAGE, f"{actor_id}");
-            assert(energy == 12);
-            // TODO: Validate split = target!
-            energy = 0;
-            // assert(game.my_chars[actor_id].get_status() == 2);
-            if game.my_chars[actor_id].get_status() < 2 {
-                *game.my_chars[actor_id].status += 1;
-        game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(SEE_CAST, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_std_event(SEE_CAST, actor.id, actor.get_x(), actor.get_y())));
-            } else {
-        game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], 48, ATTACK_FIREBALL);
-        // assert(ec == 0);
-        // assert(game_events[0] ==0);
-            assert(game_events[0] != 0);
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, actor.get_x(), actor.get_y(), 48, ATTACK_FIREBALL)));
-            }
-        }
-        else if action == SET_TRAP {
-            assert(split[2] == game.my_chars[actor_id].id);
-            assert(game.my_chars[actor_id].set_status(0));
-            // assert(game.add_my_trap(new_trap)); // TODO: add more trap types ... for now all do 64 damage
+//     //let mut actor = &mut game.my_chars[actor_id];
+//     // let class = actor.get_class();
+//     // let id = actor.get_id();
+//     // assert(1 == 2,f"{id} {class}");
+//     // assert(actor_result.success);
+//     // let mut actor = actor_result.value;
+//     let mut game_events = game.events.map(|event| event);
+//     let mut energy: u8 = 12;
 
-        assert(MAX_TRAPS <= TRAPS_BUFFER_SIZE);
-        // game.traps[tc & TRAPS_BUFFER_MASK] = new_trap;/////////TODO: no idea how to make compiler accept this
-        tc += 1;
-        *game.trap_count = tc;
-        
-        //let mut tile = TRAP;
-        // assert(tc < MAX_TRAPS & game.map.set(new_trap.x, new_trap.y, tile));
-            // if my_traps.len() >= 10 {
-            //     let (_popped, rest) = my_traps.pop_front();
-            //     my_traps = rest.push_back(Trap { x: split[3], y: split[4]});
-            // }
-        }
-        else if action == ATTACK {
-            assert(split[2] == game.my_chars[actor_id].id);
-            if game.my_chars[actor_id].get_class() == ARCHER {
-                assert(game.my_chars[actor_id].get_status() == 1);
-                // assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], actor.damage, ATTACK_RANGED)));
-        game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_RANGED);
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-            } else {
-                let is_neighbor_result = Map::is_neighbor(game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), split[3], split[4]);
-                assert(is_neighbor_result.success);
-                assert(is_neighbor_result.value);
-                // assert_neighbor(actor, split[3], split[4]);
-                // assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], actor.damage, ATTACK_MELEE)));
-        game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_MELEE);
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // let tile_result = game.get_tile(split[3], split[4]);
-                // assert(tile_result.success);
-                // if (actor.get_class() == KNIGHT) & (tile_result.value == WALL) {
-                //     assert(game.set_tile(split[3], split[4], EMPTY));
-                // }
-            }
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-    //     else if action == DRAW {
-    //         assert(split[2] == actor.id);
-    //         assert(actor.get_class() == ARCHER);
-    //         assert(actor.set_status(1));
-    //         assert(game.add_event(build_std_event(SEE_DRAW, actor.id, split[3], split[4])));
-    //     }
-    //     // else if action == TRIGGER_TRAP {
-    //     //     let target = split[2];
-    //     //     assert(game.add_event(build_value_event(TRIGGERED_TRAP, target, split[3], split[4]));
-    //     //     i += 1;
-    //     // }
-    //     else if action == WAIT {
-    //         // assert(game.add_event(build_event(NO_EVENT, split[2], 255, 255));
-    //         assert(actor.set_status(0));
-    //     }
-    //     else {
-    //         assert(1 == 2); // basically, invalid action code
-    //     }
-    }
+//     //let actor = &mut game.my_chars[actor_id];
 
-    for i in 0..MAX_EVENTS {
-        let v0 = sending_events[i];
-        let v1 = game_events[i];
-        assert(sending_events[i] == game_events[i], f"{i}: {v0} != {v1}");
-    }
 
-    for i in 0..HEIGHT {
-        for j in 0..WIDTH {
-            let tile_result = game.map.get(j, i);
-            assert(tile_result.success);
-            assert(map_new[i][j] == tile_result.value);
-        }
-    }
-    // if their_char[0].health + their_char[1].health + their_char[2].health + their_char[3].health + their_char[4].health == 0 {
-    //     // won0x04021604300200000000000000000000000000000000000000000000000000
-    // }         0x04020216300200000000000000000000000000000000000000000000000000
-    let map_after = [
-        game.map._data[0].map(|cell| *cell),
-        game.map._data[1].map(|cell| *cell),
-        game.map._data[2].map(|cell| *cell),
-        game.map._data[3].map(|cell| *cell),
-        game.map._data[4].map(|cell| *cell),
-        game.map._data[5].map(|cell| *cell),
-        game.map._data[6].map(|cell| *cell),
-        game.map._data[7].map(|cell| *cell),
-        game.map._data[8].map(|cell| *cell),
-        game.map._data[9].map(|cell| *cell),
-    ];
-    let my_chars_after = game.serialize_my_chars();
-    assert(my_chars_after.success);
-    let their_chars_after = game.serialize_their_chars();
-    assert(their_chars_after.success);
-    let traps_after = serialize_traps(game.get_trap_count() as u8, *game.traps);
-    let searched_traps_after = serialize_traps(game.get_their_trap_count() as u8, *game.searched_traps);
+//     for j in 0..5 {
+//         let split = actions[j].to_be_bytes(32);
+//         let action = split[1];
+//         assert(action < ACTION_COUNT);
 
-    let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), my_chars_after.value.to_be_bytes(32), their_chars_after.value.to_be_bytes(32), traps_after.to_be_bytes(32), map_after, searched_traps_after.to_be_bytes(32));
-    let new_hash = std::field::bytes32_to_field(new_hash_bytes);
-    assert(new_hash == gamestate_after_hash, f"{new_hash} != {gamestate_after_hash}");
-    // let new_gamestate_bytes = gamestate_after_hash.to_be_bytes(32);
-    // assert(new_gamestate_bytes.len() == 32);
-    // for i in 0..32 {
-    //     assert(new_hash[i] == new_gamestate_bytes[i]);
-    // }
-}
+//         let current_actor_id = split[2];
 
-#[test]
-fn get_demo_game() {
-    let mut c0 = get_test_my_character(0, 2, 2, ARCHER);
-    let mut c1 = get_test_my_character(1, 2, 3, KNIGHT);
-    let mut c2 = get_test_my_character(2, 2, 4, MAGE);
-    let mut c3 = get_test_my_character(3, 2, 5, ROGUE);
-    let mut c4 = get_test_my_character(4, 2, 6, RITUALIST);
+//         let current_arg_1 = split[3];
+//         let current_arg_2 = split[4];
 
-    let mut e0 = get_test_their_character(0, 22, 2, UNKNOWN_CLASS);
-    let mut e1 = get_test_their_character(1, 22, 3, UNKNOWN_CLASS);
-    let mut e2 = get_test_their_character(2, 22, 4, UNKNOWN_CLASS);
-    let mut e3 = get_test_their_character(3, 22, 5, UNKNOWN_CLASS);
-    let mut e4 = get_test_their_character(4, 22, 6, UNKNOWN_CLASS);
+//         if (action != WAIT) {
+//             assert(actor_id == current_actor_id, f"{actor_id} != {current_actor_id}");
+//             assert(current_actor_id == game.my_chars[current_actor_id].id, game.my_chars[current_actor_id].id);
+//         }
 
-    *c2.status = 2;
+//         let current_class = game.my_chars[current_actor_id].get_class();
+//         println(f"Current Actor: {current_actor_id} {current_class} {current_arg_1} {current_arg_2} {action}");
 
-    // let my_traps = [0; 32];
-    // let their_traps = [0; 32];
-    let mut my_traps_result = parse_traps(0x0000ffff00000000000000000000000000000000000000000000000000000000);
-    let mut my_traps = my_traps_result.value;
-    let mut their_traps_result = parse_traps(0x0000ffff00000000000000000000000000000000000000000000000000000000);
-    let mut their_traps = their_traps_result.value;
-    //let mut map = get_test_map([c0, c1, c2, c3, c4], [e0, e1, e2, e3, e4], my_traps, their_traps);
+//         let move_to_result = move_to(game.map, game.my_chars[actor_id], &mut energy, split[3], split[4], action == MOVE);
+//         let sneak_result = sneak_to(game.map, game.my_chars[actor_id], &mut energy, split[3], split[4], action == SNEAK);
+//         let mut ec = game.events_count;
+//         // let mut tc = game.trap_count;
+//         let new_trap = Trap { x: split[3], y: split[4], sprung: &mut 0, damage: 64 };
+//             //assert(game.my_chars[actor_id].get_class() == MAGE, game.my_chars[actor_id].get_class());
+//         if action == SNEAK {
+//             println(f"Sneak");
+//             // hide: y|x|actor|0
+//             //assert(split[2] == actor_id); // for the most parts, only current actor may do stuff
+//             assert(sneak_result);
+//             // assert(game.add_event(sneak_result.value));
+//             assert(game.my_chars[actor_id].set_status(0));
+//         }
+//         else if action == MOVE {
+//             println(f"Move to {split[3]} {split[4]}");
+//             // movey|x|actor|0
+//             //assert(split[2] == actor_id);// for the most parts, only current actor may do stuff
+//             //action_event_result = move_to(game.map, actor, &mut energy, split[3], split[4]);
+//             assert(move_to_result.success);
+//             assert(game.add_event(move_to_result.value));
+//         // game_events[ec & EVENTS_BUFFER_MASK] = move_to_result.value;
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//             assert(game.my_chars[actor_id].set_status(0));
+//         }
+//         else if action == RITUAL {
+//             println(f"Ritual");
+//             //assert(split[2] == game.my_chars[actor_id].id); // for the most parts, only current actor may do stuff
+//             assert(game.my_chars[actor_id].get_class() == RITUALIST);
+//             assert(energy == 12);
+//             energy = 0;
+//             if game.my_chars[actor_id].get_status() < 7 {
+//                 (*game.my_chars[actor_id]).status += 1;
+//         // game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(RITUAL, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//                 assert(game.add_event(build_std_event(RITUAL, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y())));
+//             } else {
+//         // game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(WIN, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//                 assert(game.add_event(build_std_event(WIN, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y())));
+//             }
+//             assert(game.my_chars[actor_id].set_status(0));
+//         }
+//         else if action == SEARCH {
+//             println("Search");
+//             //assert(split[2] == game.my_chars[actor_id].id);
+//             assert(game.my_chars[actor_id].get_class() == ROGUE);
+//             let x = split[3];
+//             let y = split[4];
+//             assert(x < WIDTH);
+//             assert(y < HEIGHT);
+//             assert(energy >= 6);
+//             let is_neighbor_result = Map::is_neighbor(game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), x, y);
+//             assert(is_neighbor_result.success);
+//             assert(is_neighbor_result.value);
+//             // assert(((x == actor.x) & ((y == actor.y + 1) | (y == actor.y - 1))) | ((y == actor.x) & ((x == actor.x + 1) | (x == actor.x - 1))));
+//             // assert(game.add_event(build_std_event(NO_EVENT, 0, 0, 0)));
+//             energy -= 6;
+//             assert(game.my_chars[actor_id].set_status(0));
+//         }
+//         else if action == CAST_FIREBALL {
+//             println("Cast Fireball");
+//            // assert(split[2] == game.my_chars[actor_id].id);// for the most parts, only current actor may do stuff
+//             assert((*game.my_chars[actor_id]).get_class() == MAGE, game.my_chars[actor_id].class);
+//             //assert(current_class == MAGE);
+//             assert(energy == 12);
+//             // TODO: Validate split = target!
+//             energy = 0;
+//             // assert(game.my_chars[actor_id].get_status() == 2);
+//             if game.my_chars[actor_id].get_status() == 0 {
+//                 //println("start cast");
+//                 assert(game.my_chars[actor_id].set_target(split[3], split[4]));
+//             } else {
+//                 // println("continue cast");
+//                 // println(game.my_chars[actor_id].get_target_x());
+//                 println(game.my_chars[actor_id].get_target_y());
+//                 // println(split[3]);
+//                 println(split[4]);
+//                 assert(game.my_chars[actor_id].get_target_x() == split[3]);
+//                 assert(game.my_chars[actor_id].get_target_y() == split[4]);
+//             }
 
-    let mut map = get_test_map(
-        [c0, c1, c2, c3, c4], //[get_test_my_character(0, 2, 2, ROGUE), get_test_my_character(1, 2, 3, KNIGHT), get_test_my_character(2, 2, 4, MAGE), get_test_my_character(3, 2, 5, RITUALIST), get_test_my_character(4, 2, 6, ARCHER)],
-        [e0, e1, e2, e3, e4], //[get_test_their_character(0, 22, 2, UNKNOWN_CLASS), get_test_their_character(1, 22, 3, UNKNOWN_CLASS), get_test_their_character(2, 22, 4, UNKNOWN_CLASS), get_test_their_character(3, 22, 5, UNKNOWN_CLASS), get_test_their_character(4, 22, 6, UNKNOWN_CLASS)],
-        [Trap { x: 255, y: 255, sprung: &mut 0, damage: 0 }; TRAPS_BUFFER_SIZE], /// TODO: using my_traps here causes exception on compile
-        [Trap { x: 255, y: 255, sprung: &mut 0, damage: 0 }; TRAPS_BUFFER_SIZE],
-    );
+//                 // println(actor_id);
+//                 // println(game.my_chars[actor_id].get_status());
+//             if game.my_chars[actor_id].get_status() < 2 {
+//                 (*game.my_chars[actor_id]).status += 1;
+//         // game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(SEE_CAST, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//                 assert(game.add_event(build_std_event(SEE_CAST, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y())));
+//             } else {
+//         game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], 48, ATTACK_FIREBALL);
+//         // assert(ec == 0);
+//         // assert(game_events[0] ==0);
+//             assert(game_events[0] != 0);
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//                 assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), 48, ATTACK_FIREBALL)));
+//             }
+//         }
+//         else if action == SET_TRAP {
+//             println("Set Trap");
+//             //assert(split[2] == game.my_chars[actor_id].id);
+//             assert(game.my_chars[actor_id].set_status(0));
+//             assert(game.add_my_trap(new_trap)); // TODO: add more trap types ... for now all do 64 damage
 
-    let game = Game {
-        my_chars: [&mut c0, &mut c1, &mut c2, &mut c3, &mut c4],
-        their_chars: [&mut e0, &mut e1, &mut e2, &mut e3, &mut e4],
-        traps: &mut my_traps,
-        searched_traps: &mut their_traps,
-        map: map,
-        events: &mut [0; MAX_EVENTS],
-        events_count: &mut 0,
-        won: &mut false,
-        lost: &mut false,
-        trap_count: &mut my_traps_result.count,
-        searched_trap_count: &mut their_traps_result.count,
-    };
+//             assert(MAX_TRAPS <= TRAPS_BUFFER_SIZE);
+//             // game.traps[tc & TRAPS_BUFFER_MASK] = new_trap;/////////TODO: no idea how to make compiler accept this
+//             // tc += 1;
+//             // *game.trap_count = tc;
+            
+//             //let mut tile = TRAP;
+//             // assert(tc < MAX_TRAPS & game.map.set(new_trap.x, new_trap.y, tile));
+//             // if my_traps.len() >= 10 {
+//             //     let (_popped, rest) = my_traps.pop_front();
+//             //     my_traps = rest.push_back(Trap { x: split[3], y: split[4]});
+//             // }
+//         }
+//         else if action == ATTACK {
+//             println("Attack");
+//             //assert(split[2] == game.my_chars[actor_id].id);
+//             if game.my_chars[actor_id].get_class() == ARCHER {
+//                 assert(game.my_chars[actor_id].get_status() == 1);
+//                 assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_RANGED)));
+//         // game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_RANGED);
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//             } else {
+//                 let is_neighbor_result = Map::is_neighbor(game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), split[3], split[4]);
+//                 assert(is_neighbor_result.success);
+//                 assert(is_neighbor_result.value);
+//                 // assert_neighbor(actor, split[3], split[4]);
 
-    let map_after = [
-        game.map._data[0].map(|cell| *cell),
-        game.map._data[1].map(|cell| *cell),
-        game.map._data[2].map(|cell| *cell),
-        game.map._data[3].map(|cell| *cell),
-        game.map._data[4].map(|cell| *cell),
-        game.map._data[5].map(|cell| *cell),
-        game.map._data[6].map(|cell| *cell),
-        game.map._data[7].map(|cell| *cell),
-        game.map._data[8].map(|cell| *cell),
-        game.map._data[9].map(|cell| *cell),
-    ];
-    assert(map_after.len() == 10);
-    for i in 0..10 {
-        assert(map_after[i].len() == 32);
-    }
-    let my_chars_after = game.serialize_my_chars();
-    assert(my_chars_after.success);
-    let their_chars_after = game.serialize_their_chars();
-    assert(their_chars_after.success);
-    let traps_after = serialize_traps(game.get_trap_count() as u8, *game.traps);
-    let searched_traps_after = serialize_traps(game.get_their_trap_count() as u8, *game.searched_traps);
+//                 assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_MELEE)));
+//         // game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_MELEE);
+//         // assert(ec < MAX_EVENTS);
+//         // ec += 1;
+//         // *game.events_count = ec;
+//                 // let tile_result = game.get_tile(split[3], split[4]);
+//                 // assert(tile_result.success);
+//                 // if (actor.get_class() == KNIGHT) & (tile_result.value == WALL) {
+//                 //     assert(game.set_tile(split[3], split[4], EMPTY));
+//                 // }
+//             }
+//             assert(game.my_chars[actor_id].set_status(0));
+//         }
+//     //     else if action == DRAW {
+//     //         assert(split[2] == actor.id);
+//     //         assert(actor.get_class() == ARCHER);
+//     //         assert(actor.set_status(1));
+//     //         assert(game.add_event(build_std_event(SEE_DRAW, actor.id, split[3], split[4])));
+//     //     }
+//     //     // else if action == TRIGGER_TRAP {
+//     //     //     let target = split[2];
+//     //     //     assert(game.add_event(build_value_event(TRIGGERED_TRAP, target, split[3], split[4]));
+//     //     //     i += 1;
+//     //     // }
+//     //     else if action == WAIT {
+//     //         // assert(game.add_event(build_event(NO_EVENT, split[2], 255, 255));
+//     //         assert(actor.set_status(0));
+//     //     }
+//     //     else {
+//     //         assert(1 == 2); // basically, invalid action code
+//     //     }
+//     }
 
-    let my_chars = my_chars_after.value;
-    let their_chars = their_chars_after.value;
+// //     for i in 0..MAX_EVENTS {
+// //         let v0 = sending_events[i];
+// //         let v1 = game_events[i];
+// //         assert(sending_events[i] == game_events[i], f"{i}: {v0} != {v1}");
+// //     }
 
-    assert(map_after[2][22] == UNKNOWN_CLASS_TILE);
+// //     for i in 0..HEIGHT {
+// //         for j in 0..WIDTH {
+// //             let tile_result = game.map.get(j, i);
+// //             assert(tile_result.success);
+// //             assert(map_new[i][j] == tile_result.value);
+// //         }
+// //     }
+// //     // if their_char[0].health + their_char[1].health + their_char[2].health + their_char[3].health + their_char[4].health == 0 {
+// //     //     // won0x04021604300200000000000000000000000000000000000000000000000000
+// //     // }         0x04020216300200000000000000000000000000000000000000000000000000
+// //     let map_after = [
+// //         game.map._data[0].map(|cell| *cell),
+// //         game.map._data[1].map(|cell| *cell),
+// //         game.map._data[2].map(|cell| *cell),
+// //         game.map._data[3].map(|cell| *cell),
+// //         game.map._data[4].map(|cell| *cell),
+// //         game.map._data[5].map(|cell| *cell),
+// //         game.map._data[6].map(|cell| *cell),
+// //         game.map._data[7].map(|cell| *cell),
+// //         game.map._data[8].map(|cell| *cell),
+// //         game.map._data[9].map(|cell| *cell),
+// //     ];
+// //     let my_chars_after = game.serialize_my_chars();
+// //     assert(my_chars_after.success);
+// //     let their_chars_after = game.serialize_their_chars();
+// //     assert(their_chars_after.success);
+// //     let traps_after = serialize_traps(game.get_trap_count() as u8, *game.traps);
+// //     let searched_traps_after = serialize_traps(game.get_their_trap_count() as u8, *game.searched_traps);
 
-    let secret: Field = 1234567890;
-    let new_hash_array = get_data_hash(secret.to_be_bytes(32), my_chars_after.value.to_be_bytes(32), their_chars.to_be_bytes(32), traps_after.to_be_bytes(32), [
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, ARCHER, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [WALL, WALL, KNIGHT,WALL, WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [WALL, EMPTY,MAGE,  EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, EMPTY,ROGUE,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, WALL, RITUALIST,WALL, WALL, 0, 0, EMPTY,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, EMPTY,0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
-    ], searched_traps_after.to_be_bytes(32));
-    let new_hash = std::field::bytes32_to_field(new_hash_array);
+// //     let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), my_chars_after.value.to_be_bytes(32), their_chars_after.value.to_be_bytes(32), traps_after.to_be_bytes(32), map_after, searched_traps_after.to_be_bytes(32));
+// //     let new_hash = std::field::bytes32_to_field(new_hash_bytes);
+// //     assert(new_hash == gamestate_after_hash, f"{new_hash} != {gamestate_after_hash}");
+// //     // let new_gamestate_bytes = gamestate_after_hash.to_be_bytes(32);
+// //     // assert(new_gamestate_bytes.len() == 32);
+// //     // for i in 0..32 {
+// //     //     assert(new_hash[i] == new_gamestate_bytes[i]);
+// //     // }
+// // }
 
-    assert(new_hash == 0x0716ac88cc4d1abab6ed2c00278573908bc1b360c955eab19e5822c1d107cdcc, f"hash: {new_hash}, secret: {secret}, my_chars: {my_chars}, their_chars: {their_chars}, traps: {traps_after}, searched_traps: {searched_traps_after}");
+        let ts: [&mut Test; 2] = [ &mut Test::new(map_new[0][0], map_new[0][1]), &mut Test::new(map_new[1][0], map_new[1][1]) ];
+        t(ts[0], map_new[3][3], map_new[2][2]);
+        assert(ts[0].a == map_new[3][3]);
 }
 
 #[test]
 fn test_main() {
     main(
         1234567890,
-        0x2202643f0f008203643f0f00a224643f0f006205643f0f004206643f0f00,
-        0x1602ff3f0f001603ff3f0f001604ff3f0f001605ff3f0f001606ff3f0f00,
+        0x2202643f0f008203643f0f00a224643604006205643f0f004206643f0f00,
+        0x1602ff1f0f001603ff1f0f001604ff1f0f001605ff1f0f001606ff1f0f00,
         [ std::field::bytes32_to_field([0, CAST_FIREBALL, 2, 22, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 0, 0, 0, 0],
-        0x7fff00000000000000000000000000000000000000000000000000000000,
-        0x7fff00000000000000000000000000000000000000000000000000000000,
+        0x000210020300FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
+        0x000210020300FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
         4,
         [
         [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
@@ -634,7 +723,7 @@ fn test_main() {
     ],
         [0; MAX_EVENTS],
         [build_subtype_value_event(RECEIVE_ATTACK, 2, 22, 4, 48, ATTACK_FIREBALL), 0, 0, 0, 0, 0, 0, 0],
-        0x0716ac88cc4d1abab6ed2c00278573908bc1b360c955eab19e5822c1d107cdcc,
+        0x26006810f066d34cdabf83fa4c697c6e30f252b866758499ac06a7955b4c234b, //0x0716ac88cc4d1abab6ed2c00278573908bc1b360c955eab19e5822c1d107cdcc,
         0x0a824dd1c049066a192d49045e50814708070119ff93e13bb3805b1074ccaff6
     )
 }

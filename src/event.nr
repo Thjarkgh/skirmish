@@ -40,24 +40,28 @@ struct Event {
 }
 
 fn handle_see_move(game: &mut Game, actor_id: u8, x: u8, y: u8) -> bool {
-    let mut result = false;
-    if actor_id < 5 {
-        let mut actor_result = game.get_their_char(actor_id);
-        if actor_result.success {
-            let mut actor = actor_result.value;
-            let is_neighbor_result = Map::is_neighbor(actor.get_x(), actor.get_y(), x, y);
-            if is_neighbor_result.success {
-                if is_neighbor_result.value {
-                    let can_move_to = game.map.can_move_to(x, y);
-                    if can_move_to.success & can_move_to.value {
-                        result = actor.set_pos(x, y);
-                        //result = true;
-                    }
-                }
-            }
-        }
-    }
-    result
+    //assert(actor_id < 5);
+    // let actor_result = game.get_their_char(actor_id);
+    // assert(actor_result.success);
+    true
+    // let mut result = false;
+    // if actor_id < 5 {
+    //     let mut actor_result = game.get_their_char(actor_id);
+    //     if actor_result.success {
+    //         let mut actor = actor_result.value;
+    //         let is_neighbor_result = Map::is_neighbor(actor.get_x(), actor.get_y(), x, y);
+    //         if is_neighbor_result.success {
+    //             if is_neighbor_result.value {
+    //                 let can_move_to = game.map.can_move_to(x, y);
+    //                 if can_move_to.success & can_move_to.value {
+    //                     result = actor.set_pos(x, y);
+    //                     //result = true;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // result
 }
 
 #[test]
@@ -102,7 +106,7 @@ fn handle_see_progress(game: &mut Game, actor_id: u8, value: u8) -> bool {
         if actor_result.success {
             let mut actor = actor_result.value;
             if (actor.get_status() == 0) | (actor.get_status() + 1 == value) {
-                result = actor.set_status(*actor.status + 1);
+                result = actor.set_status(actor.status + 1);
             }
         }
     }
@@ -196,15 +200,16 @@ fn test_handle_see_search_trap() {
     assert(not_found == 0);
 }
 
-fn handle_receive_attack(game: Game, x: u8, y: u8, dmg: u8, subtype: u8) -> Result<[Field; 8]> {
+fn handle_receive_attack(my_chars: [&mut Character; 5], map: &mut Map, x: u8, y: u8, dmg: u8, subtype: u8) -> Result<[Field; 8]> {
     let mut success = true;
     let mut event_counter = 0;
     let mut result: [Field; 8] = [0; 8];
     let splash_dmg: u8 = dmg >> 1;
     for j in 0..5 {
-        let my_char_result = game.get_my_char(j);
-        success &= my_char_result.success;
-        let my_char = my_char_result.value;
+        // let my_char_result = game.get_my_char(j);
+        // success &= my_char_result.success;
+        // let my_char = my_char_result.value;
+        let my_char = my_chars[j];
 
         if (my_char.get_x() == x) & (my_char.get_y() == y) { /////////////events and actions: rethink the be/le stuff!
             //if !Character::set_status(my_char, 0) { false }
@@ -259,7 +264,7 @@ fn handle_receive_attack(game: Game, x: u8, y: u8, dmg: u8, subtype: u8) -> Resu
         }
     }
 
-    let tile_result = game.get_tile(x, y);
+    let tile_result = map.get(x, y);
     success &= tile_result.success;
     if tile_result.value == WALL {
         //if !game.set_tile(self.x, self.y, EMPTY) { false }
@@ -275,11 +280,12 @@ fn handle_receive_attack(game: Game, x: u8, y: u8, dmg: u8, subtype: u8) -> Resu
 #[test]
 fn test_handle_receive_attack() {
     let mut game = crate::game::get_test_game();
-    let char1 = game.get_my_char(0).value;
-    let char2 = game.get_my_char(1).value;
-    let char3 = game.get_my_char(2).value;
+    let mut my_chars = crate::game::get_test_my_chars();
+    let char1 = my_chars[0]; //game.get_my_char(0).value;
+    let char2 = my_chars[1]; //game.get_my_char(1).value;
+    let char3 = my_chars[2]; //game.get_my_char(2).value;
 
-    let result = handle_receive_attack(game, char2.get_x(), char2.get_y(), 128, ATTACK_FIREBALL);
+    let result = handle_receive_attack(my_chars, game.map, char2.get_x(), char2.get_y(), 128, ATTACK_FIREBALL);
     assert(result.success == true);
     let ev0 = result.value[0];
     let ev0_should = build_value_event(RECEIVE_DAMAGE, 0, char1.get_x(), char1.get_y(), 64);
@@ -298,11 +304,11 @@ fn test_handle_receive_attack() {
 }
 
 // TODO: handle multiple traps on the same field!
-fn handle_trigger_trap(game: &mut Game, actor_id: u8, x: u8, y: u8, value: u8) -> Result<Field> {
-    let my_char_result = game.get_my_char(actor_id);
-    //if !my_char_result.success { false }
-    let mut success = my_char_result.success;
-    let my_char = my_char_result.value;
+fn handle_trigger_trap(game: &mut Game, my_char: &mut Character, x: u8, y: u8, value: u8) -> Result<Field> {
+    // let my_char_result = game.get_my_char(actor_id);
+    // //if !my_char_result.success { false }
+    let mut success = true; //my_char_result.success;
+    // let my_char = my_char_result.value;
     let mut found: u8 = 0;
     let mut not_found: u8 = 1;
 
@@ -329,7 +335,7 @@ fn handle_trigger_trap(game: &mut Game, actor_id: u8, x: u8, y: u8, value: u8) -
             }
         }
     }
-    let searched_trap_count = *game.searched_trap_count;
+    let searched_trap_count = game.searched_trap_count;
     let next_trap_pos = TRAPS_BUFFER_MASK & searched_trap_count;
     let old_trap = game.searched_traps[next_trap_pos];
     let mut sprung = not_found | (*old_trap.sprung & found);
@@ -340,7 +346,7 @@ fn handle_trigger_trap(game: &mut Game, actor_id: u8, x: u8, y: u8, value: u8) -
         damage: (value * not_found) | (old_trap.damage * found),
     };
     game.searched_traps[next_trap_pos] = perhaps_missing_trap;
-    *game.searched_trap_count = searched_trap_count + not_found as u64;
+    (*game).searched_trap_count = searched_trap_count + not_found as u64;
 
     // if !found {
     //     perhaps_missing_trap.x = x;
@@ -389,20 +395,20 @@ fn handle_trigger_trap(game: &mut Game, actor_id: u8, x: u8, y: u8, value: u8) -
 #[test]
 fn test_handle_trigger_trap() {
     let mut game = crate::game::get_test_game();
-    let mut char2 = game.get_my_char(1).value;
+    let mut char2 = crate::character::get_test_my_character(1, 2, 3, 4); // game.get_my_char(1).value;
 
-    let result = handle_trigger_trap(&mut game, 1, char2.get_x(), char2.get_y(), 32);
+    let result = handle_trigger_trap(&mut game, &mut char2, char2.get_x(), char2.get_y(), 32);
     assert(result.success == true);
     assert(result.value == 0); // we have not been spotted yet!
     assert(char2.get_health() == 68);
 
     assert(char2.set_has_been_seen(1));
-    let result2 = handle_trigger_trap(&mut game, 1, char2.get_x(), char2.get_y(), 32);
+    let result2 = handle_trigger_trap(&mut game, &mut char2, char2.get_x(), char2.get_y(), 32);
     assert(result2.success == true);
     assert(result2.value == build_value_event(RECEIVE_DAMAGE, 1, char2.get_x(), char2.get_y(), 32));
     assert(char2.get_health() == 36);
 
-    let result3 = handle_trigger_trap(&mut game, 1, char2.get_x(), char2.get_y(), 64);
+    let result3 = handle_trigger_trap(&mut game, &mut char2, char2.get_x(), char2.get_y(), 64);
     let ev0 = result3.value;
     let ev0_should = build_std_event(DEATH, 1, char2.get_x(), char2.get_y());
     assert(ev0 == ev0_should, f"event 3: {ev0} != {ev0_should}");
@@ -415,87 +421,119 @@ impl Event {
 
     fn process(self, game: &mut Game) -> bool {
         let mut result = true;
+            assert(self.actor_id < 5);
+        let actor = game.their_chars[self.actor_id];
         if self.event >= EVENT_COUNT { result = false; }
         if self.event == NO_EVENT {
             result = true;
         }
         if self.event == SEE_MOVE {
-            result &= handle_see_move(game, self.actor_id, self.x, self.y);
-            let trap_dmg = get_accumulated_trap_damage(game, self.x, self.y);
-            if trap_dmg > 0 {
-                result &= game.add_event(build_value_event(TRIGGERED_TRAP, self.actor_id, self.x, self.y, trap_dmg));
-            }
-        }
-        if (self.event == SEE_RITUAL) | (self.event == SEE_CAST) | (self.event == SEE_DRAW) {
-            result &= handle_see_progress(game, self.actor_id, self.value);
-        }
-        if self.event == SEE_SEARCH_TRAP {
-            let result_event = handle_see_search_trap(*game, self.actor_id, self.x, self.y);
-            if result_event != 0 {
-                result &= game.add_event(result_event);
-            }
-        }
-        if self.event == RECEIVE_ATTACK {
-            let result_event = handle_receive_attack(*game, self.x, self.y, self.value, self.subtype);
-            if result_event.success {
-                for i in 0..8 {
-                    if result_event.value[i] != 0 {
-                        result &= game.add_event(result_event.value[i]);
+            let is_neighbor_result = Map::is_neighbor(actor.get_x(), actor.get_y(), self.x, self.y);
+            if is_neighbor_result.success {
+                if is_neighbor_result.value {
+                    let can_move_to = game.map.can_move_to(self.x, self.y);
+                    if can_move_to.success & can_move_to.value {
+                        result = actor.set_pos(self.x, self.y);
                     }
                 }
-            } else {
-                result = false;
             }
+            //let actor_result = game.get_their_char(self.actor_id);
+            // assert(actor_result.success);
+        // let mut result = false;
+        // if actor_id < 5 {
+        //     let mut actor_result = game.get_their_char(actor_id);
+        //     if actor_result.success {
+        //         let mut actor = actor_result.value;
+        //         let is_neighbor_result = Map::is_neighbor(actor.get_x(), actor.get_y(), x, y);
+        //         if is_neighbor_result.success {
+        //             if is_neighbor_result.value {
+        //                 let can_move_to = game.map.can_move_to(x, y);
+        //                 if can_move_to.success & can_move_to.value {
+        //                     result = actor.set_pos(x, y);
+        //                     //result = true;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // result
+            //assert(game.handle_see_move(self.actor_id, self.x, self.y));
+            // let trap_dmg = get_accumulated_trap_damage(game, self.x, self.y);
+            // if trap_dmg > 0 {
+            //     result &= game.add_event(build_value_event(TRIGGERED_TRAP, self.actor_id, self.x, self.y, trap_dmg));
+            // }
         }
-        if self.event == TRIGGERED_TRAP { // actor_id = my_char when receive
-            let result_event = handle_trigger_trap(game, self.actor_id, self.x, self.y, self.value);
-            if result_event.success {
-                result &= game.add_event(result_event.value);
-            } else {
-                result = false;
-            }
-        }
-        if self.event == WIN {
-            for i in 0..5 {
-                let my_char_result = Game::get_my_char(*game, i);
-                if !my_char_result.success { false }
-                let my_char = my_char_result.value;
+        // if (self.event == SEE_RITUAL) | (self.event == SEE_CAST) | (self.event == SEE_DRAW) {
+        //     result &= handle_see_progress(game, self.actor_id, self.value);
+        // }
+        // if self.event == SEE_SEARCH_TRAP {
+        //     let result_event = handle_see_search_trap(*game, self.actor_id, self.x, self.y);
+        //     if result_event != 0 {
+        //         result &= game.add_event(result_event);
+        //     }
+        // }
+        // if self.event == RECEIVE_ATTACK {
+        //     let result_event = handle_receive_attack(game.my_chars, game.map, self.x, self.y, self.value, self.subtype);
+        //     if result_event.success {
+        //         for i in 0..8 {
+        //             if result_event.value[i] != 0 {
+        //                 result &= game.add_event(result_event.value[i]);
+        //             }
+        //         }
+        //     } else {
+        //         result = false;
+        //     }
+        // }
+        // if self.event == TRIGGERED_TRAP { // actor_id = my_char when receive
+        //     let result_event = handle_trigger_trap(game, game.my_chars[self.actor_id], self.x, self.y, self.value);
+        //     if result_event.success {
+        //         result &= game.add_event(result_event.value);
+        //     } else {
+        //         result = false;
+        //     }
+        // }
+        // if self.event == WIN {
+        //     for i in 0..5 {
+        //         // let my_char_result = Game::get_my_char(*game, i);
+        //         // if !my_char_result.success { false }
+        //         // let my_char = my_char_result.value;
+        //         let my_char = game.my_chars[i];
 
-                if (my_char.get_health() > 0) {
-                    false //the other one cheated, I did not lose, I still got alive characters!
-                }
-            }
-            result &= game.lose();
-        }
-        if self.event == FOUND_TRAP { // actor_id = my_char when receive
-            result &= game.add_their_trap(Trap { x: self.x, y: self.y, sprung: &mut 0, damage: self.value });
-        }
-        if self.event == SEE_CHARS { // actor_id = their_char when receive, got health & class
-            let their_char_result = game.get_their_char(self.actor_id);
-            result = their_char_result.success;
-            let their_char = their_char_result.value;
+        //         if (my_char.get_health() > 0) {
+        //             false //the other one cheated, I did not lose, I still got alive characters!
+        //         }
+        //     }
+        //     result &= game.lose();
+        // }
+        // if self.event == FOUND_TRAP { // actor_id = my_char when receive
+        //     result &= game.add_their_trap(Trap { x: self.x, y: self.y, sprung: &mut 0, damage: self.value });
+        // }
+        // if self.event == SEE_CHARS { // actor_id = their_char when receive, got health & class
+        //     let their_char_result = game.get_their_char(self.actor_id);
+        //     result = their_char_result.success;
+        //     let their_char = their_char_result.value;
 
-            result &= their_char.get_has_been_seen() == 0;
-            result &= their_char.set_health(self.value);
-            result &= their_char.set_class(self.subtype);
-        }
-        if self.event == RECEIVE_DAMAGE { // actor_id = their_char when receive
-            let their_char_result = game.get_their_char(self.actor_id);
-            let their_health = their_char_result.value.get_health();
+        //     result &= their_char.get_has_been_seen() == 0;
+        //     result &= their_char.set_health(self.value);
+        //     result &= their_char.set_class(self.subtype);
+        // }
+        // if self.event == RECEIVE_DAMAGE { // actor_id = their_char when receive
+        //     let their_char_result = game.get_their_char(self.actor_id);
+        //     let their_health = their_char_result.value.get_health();
 
-            if their_health <= self.value {
-                result = false; // something is off
-            } else {
-                result = their_char_result.success & their_char_result.value.set_health(their_health - self.value);
-            }
-        }
-        if self.event == DESTROY { // actor_id = tile
-            result = game.set_tile(self.x, self.y, EMPTY);
-        }
-        if self.event == DEATH { // actor_id = their_char when receive
-            let their_char_result = game.get_their_char(self.actor_id);
-            result = their_char_result.success & their_char_result.value.set_health(0);
-        }
+        //     if their_health <= self.value {
+        //         result = false; // something is off
+        //     } else {
+        //         result = their_char_result.success & their_char_result.value.set_health(their_health - self.value);
+        //     }
+        // }
+        // if self.event == DESTROY { // actor_id = tile
+        //     result = game.set_tile(self.x, self.y, EMPTY);
+        // }
+        // if self.event == DEATH { // actor_id = their_char when receive
+        //     let their_char_result = game.get_their_char(self.actor_id);
+        //     result = their_char_result.success & their_char_result.value.set_health(0);
+        // }
         result
     }
 }
@@ -575,6 +613,7 @@ fn test_build_subtype_value_event() {
 #[test]
 fn test_event_no_event() {
     let mut game = crate::game::get_test_game();
+    //let my_chars = crate::game::get_test_my_chars();
     let event = Event {
         event: NO_EVENT,
         actor_id: 0,

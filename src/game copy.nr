@@ -37,26 +37,26 @@ struct Game {
     searched_traps: &mut [Trap; TRAPS_BUFFER_SIZE],
     map: &mut Map,
     events: &mut [Field; EVENTS_BUFFER_SIZE],
-    events_count: u64,
-    won: bool,
-    lost: bool,
-    trap_count: u64,
-    searched_trap_count: u64,
+    events_count: &mut u64,
+    won: &mut bool,
+    lost: &mut bool,
+    trap_count: &mut u64,
+    searched_trap_count: &mut u64,
 }
 
 impl Game {
-    pub fn lose(&mut self) -> bool {
-        let success = !(self.lost) & !(self.won);
-        (*self).lost = true;
+    pub fn lose(mut self) -> bool {
+        let success = !(*self.lost) & !(*self.won);
+        *self.lost = true;
         // if !self.lost & !self.won {
         //     self.lost = true;
         //     success = true;
         // }
         success
     }
-    pub fn win(&mut self) -> bool {
-        let success = !(self.lost) & !(self.won);
-        (*self).won = true;
+    pub fn win(mut self) -> bool {
+        let success = !(*self.lost) & !(*self.won);
+        *self.won = true;
         success ////////////////////////////////////////////// TODO & (*self).add_event(crate::build_std_event(crate::WIN, 0, 0, 0))
         //success// let mut success = false;
         // if !self.lost & !self.won {
@@ -66,12 +66,12 @@ impl Game {
         // }
         // success
     }
-    pub fn add_event(&mut self, event: Field) -> bool {
+    pub fn add_event(mut self, event: Field) -> bool {
         //assert(MAX_EVENTS == 8);
         // let mut success = false;
-        let ec = self.events_count;
+        let ec = *self.events_count;
         self.events[ec & EVENTS_BUFFER_MASK] = event;
-        (*self).events_count = ec + 1;
+        *self.events_count = ec + 1;
         ec < MAX_EVENTS
         // if ec < MAX_EVENTS {
         //     self.events[ec] = event;
@@ -81,7 +81,7 @@ impl Game {
         // success
     }
 
-    pub fn get_my_char(&mut self, id: u8) -> crate::Result<&mut Character> {
+    pub fn get_my_char(self, id: u8) -> crate::Result<&mut Character> {
         if id < 5 {
             crate::Result {
                 value: self.my_chars[id],
@@ -110,7 +110,7 @@ impl Game {
     }
     
     pub fn get_trap_count(self) -> u64 {
-        self.trap_count
+        *self.trap_count
     }
 
     pub fn get_trap(self, id: u64) -> Result<Trap> {
@@ -122,15 +122,15 @@ impl Game {
         // }
         Result {
             value: self.traps[id & TRAPS_BUFFER_MASK],
-            success: id < self.trap_count
+            success: id < *self.trap_count
         }
     }
 
-    pub fn add_my_trap(&mut self, trap: Trap) -> bool {
+    pub fn add_my_trap(mut self, trap: Trap) -> bool {
         assert(MAX_TRAPS <= TRAPS_BUFFER_SIZE);
-        let tc = self.trap_count;
+        let tc = *self.trap_count;
         self.traps[tc & TRAPS_BUFFER_MASK] = trap;
-        (*self).trap_count = tc + 1;
+        *self.trap_count = tc + 1;
         
         // if success {
         //     self.traps[self.trap_count] = trap;
@@ -144,13 +144,13 @@ impl Game {
     }
     
     pub fn get_their_trap_count(self) -> u64 {
-        self.searched_trap_count
+        *self.searched_trap_count
     }
 
     pub fn get_their_trap(self, id: u64) -> Result<Trap> {
         Result {
             value: self.searched_traps[id & TRAPS_BUFFER_MASK],
-            success: id < self.searched_trap_count
+            success: id < *self.searched_trap_count
         }
         // if (id as u64) < *self.searched_trap_count {
         //     Result {
@@ -165,11 +165,11 @@ impl Game {
         // }
     }
 
-    pub fn add_their_trap(&mut self, trap: Trap) -> bool {
+    pub fn add_their_trap(mut self, trap: Trap) -> bool {
         assert(MAX_TRAPS <= TRAPS_BUFFER_SIZE);
-        let tc = self.searched_trap_count;
+        let tc = *self.searched_trap_count;
         self.searched_traps[tc & TRAPS_BUFFER_MASK] = trap;
-        (*self).searched_trap_count = tc + 1;
+        *self.searched_trap_count = tc + 1;
         let mut tile = TRAP_FOUND;
         if *trap.sprung == 1 {
             tile = TRAP_USED;
@@ -206,57 +206,20 @@ impl Game {
         }
     }
 
-    // pub fn serialize_my_chars(self) -> Result<Field> {
-    //     Game::serialize_chars(self.my_chars)
-    // }
+    pub fn serialize_my_chars(self) -> Result<Field> {
+        Game::serialize_chars(self.my_chars)
+    }
 
     pub fn serialize_their_chars(self) -> Result<Field> {
         Game::serialize_chars(self.their_chars)
-    }
-
-    fn handle_see_move(&mut self, actor_id: u8, x: u8, y: u8) -> bool {
-        //assert(actor_id < 5);
-        // let actor_result = game.get_their_char(actor_id);
-        // assert(actor_result.success);
-        true
-        // let mut result = false;
-        // if actor_id < 5 {
-        //     let mut actor_result = game.get_their_char(actor_id);
-        //     if actor_result.success {
-        //         let mut actor = actor_result.value;
-        //         let is_neighbor_result = Map::is_neighbor(actor.get_x(), actor.get_y(), x, y);
-        //         if is_neighbor_result.success {
-        //             if is_neighbor_result.value {
-        //                 let can_move_to = game.map.can_move_to(x, y);
-        //                 if can_move_to.success & can_move_to.value {
-        //                     result = actor.set_pos(x, y);
-        //                     //result = true;
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-        // result
     }
 
     pub fn is_valid(self) -> bool {
         false
     }
 
-    pub fn parse_characters(chars: Field) -> Result<[Character; 5]> {
-        let Result { value: c0, success: c0_success } = Character::parse_character(0, chars);
-        let Result { value: c1, success: c1_success } = Character::parse_character(1, chars);
-        let Result { value: c2, success: c2_success } = Character::parse_character(2, chars);
-        let Result { value: c3, success: c3_success } = Character::parse_character(3, chars);
-        let Result { value: c4, success: c4_success } = Character::parse_character(4, chars);
-        Result {
-            value: [c0, c1, c2, c3, c4],
-            success: c0_success & c1_success & c2_success & c3_success & c4_success
-        }
-    }
-
     pub fn build(my_chars: Field, their_chars: Field, my_traps: Field, their_traps: Field, map: [[u8; WIDTH]; HEIGHT]) -> crate::Result<Game> {
-        //let mut success = true;
+        let mut success = true;
         let mut c0_result = Character::parse_character(0, my_chars);
         let mut c0 = &mut c0_result.value;
         let mut c1_result = Character::parse_character(1, my_chars);
@@ -267,7 +230,7 @@ impl Game {
         let mut c3 = &mut c3_result.value;
         let mut c4_result = Character::parse_character(4, my_chars);
         let mut c4 = &mut c4_result.value;
-        //success &= c0_result.success & c1_result.success & c2_result.success & c3_result.success & c4_result.success;
+        success &= c0_result.success & c1_result.success & c2_result.success & c3_result.success & c4_result.success;
 
         let mut e0_result = Character::parse_character(0, their_chars);
         let mut e0 = &mut e0_result.value;
@@ -279,17 +242,17 @@ impl Game {
         let mut e3 = &mut e3_result.value;
         let mut e4_result = Character::parse_character(4, their_chars);
         let mut e4 = &mut e4_result.value;
-        //success &= e0_result.success & e1_result.success & e2_result.success & e3_result.success & e4_result.success;
+        success &= e0_result.success & e1_result.success & e2_result.success & e3_result.success & e4_result.success;
 
         let mut my_traps_result = parse_traps(my_traps);
         let mut my_traps = my_traps_result.value;
         let mut their_traps_result = parse_traps(their_traps);
         let mut their_traps = their_traps_result.value;
-        //success &= my_traps_result.success & their_traps_result.success;
+        success &= my_traps_result.success & their_traps_result.success;
         
         let mut map_result = Map::build(map);
         let mut my_map = &mut map_result.value;
-        //success &= map_result.success;
+        success &= map_result.success;
 
         crate::Result {
             value: Game {
@@ -299,25 +262,15 @@ impl Game {
                 searched_traps: &mut their_traps,
                 map: my_map,
                 events: &mut [0; MAX_EVENTS],
-                events_count: 0,
-                won: false,
-                lost: false,
-                trap_count: my_traps_result.count,
-                searched_trap_count: their_traps_result.count,
+                events_count: &mut 0,
+                won: &mut false,
+                lost: &mut false,
+                trap_count: &mut my_traps_result.count,
+                searched_trap_count: &mut their_traps_result.count,
             },
             success: c0_result.success & c1_result.success & c2_result.success & c3_result.success & c4_result.success & e0_result.success & e1_result.success & e2_result.success & e3_result.success & e4_result.success & my_traps_result.success & their_traps_result.success & map_result.success,
         }
     }
-}
-
-pub fn get_test_my_chars() -> [&mut Character; 5] {
-    [
-        &mut get_test_my_character(0, 2, 2, ARCHER),
-        &mut get_test_my_character(1, 2, 3, KNIGHT),
-        &mut get_test_my_character(2, 2, 4, MAGE),
-        &mut get_test_my_character(3, 2, 5, ROGUE),
-        &mut get_test_my_character(4, 2, 6, RITUALIST),
-    ]
 }
 
 pub fn get_test_game() -> Game {
@@ -355,11 +308,11 @@ pub fn get_test_game() -> Game {
         searched_traps: &mut their_traps,
         map: map,
         events: &mut [0; MAX_EVENTS],
-        events_count: 0,
-        won: false,
-        lost: false,
-        trap_count: my_traps_result.count,
-        searched_trap_count: their_traps_result.count,
+        events_count: &mut 0,
+        won: &mut false,
+        lost: &mut false,
+        trap_count: &mut my_traps_result.count,
+        searched_trap_count: &mut their_traps_result.count,
     }
 }
 
@@ -367,8 +320,8 @@ pub fn get_test_game() -> Game {
 fn test_lose() {
     let mut game = get_test_game();
     assert(game.lose());
-    assert(game.lost);
-    assert(!(game.won));
+    assert(*game.lost);
+    assert(!(*game.won));
     assert(!game.lose());
     assert(!game.win());
 }
@@ -377,27 +330,27 @@ fn test_lose() {
 fn test_win() {
     let mut game = get_test_game();
     assert(game.win());
-    assert(game.won);
-    assert(!(game.lost));
+    assert(*game.won);
+    assert(!(*game.lost));
     assert(!game.win());
     assert(!game.lose());
 }
 
-// #[test]
-// fn test_get_update_my_char() {
-//     let mut game = get_test_game();
-//     let mut char_result = game.get_my_char(0);
-//     assert(char_result.success);
-//     let mut c0 = char_result.value;
+#[test]
+fn test_get_update_my_char() {
+    let mut game = get_test_game();
+    let mut char_result = game.get_my_char(0);
+    assert(char_result.success);
+    let mut c0 = char_result.value;
     
-//     let old_x = c0.get_x();
-//     let old_y = c0.get_y();
+    let old_x = c0.get_x();
+    let old_y = c0.get_y();
 
-//     assert(c0.set_pos(old_x + 3, old_y + 3));
+    assert(c0.set_pos(old_x + 3, old_y + 3));
 
-//     assert(game.get_my_char(0).value.get_x() == old_x + 3);
-//     assert(game.get_my_char(0).value.get_y() == old_y + 3);
-// }
+    assert(game.get_my_char(0).value.get_x() == old_x + 3);
+    assert(game.get_my_char(0).value.get_y() == old_y + 3);
+}
 
 #[test]
 fn test_get_update_their_char() {
@@ -477,9 +430,7 @@ fn test_get_tile() {
 
 #[test]
 fn test_parse_game() {
-    let crate::Result { value: mut game, success } = Game::build(
-        0x2202643f0f008203643f0f00a224643604006205643f0f004206643f0f00,
-        0x1602ff1f0f001603ff1f0f001604ff1f0f001605ff1f0f001606ff1f0f00, 0x000210020300FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0x0000ffff00000000000000000000000000000000000000000000000000000000, [
+    let mut game = Game::build(0x2202643f0f008203643f0f00a224643604006205643f0f004206643f0f00, 0x1602ff3f0f001603ff3f0f001604ff3f0f001605ff3f0f001606ff3f0f00, 0x000210020300FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0x0000ffff00000000000000000000000000000000000000000000000000000000, [
         [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, ARCHER, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,               UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
@@ -492,11 +443,11 @@ fn test_parse_game() {
         [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
     ]);
 
-    // assert(game.my_chars[0].get_class() == ARCHER);
-    // assert(game.my_chars[1].get_class() == KNIGHT);
-    // assert(game.my_chars[2].get_class() == MAGE);
-    // assert(game.my_chars[3].get_class() == ROGUE);
-    // assert(game.my_chars[4].get_class() == RITUALIST);
+    assert(game.my_chars[0].get_class() == ARCHER);
+    assert(game.my_chars[1].get_class() == KNIGHT);
+    assert(game.my_chars[2].get_class() == MAGE);
+    assert(game.my_chars[3].get_class() == ROGUE);
+    assert(game.my_chars[4].get_class() == RITUALIST);
 
     assert(game.their_chars[0].get_class() == UNKNOWN_CLASS);
     assert(game.their_chars[1].get_class() == UNKNOWN_CLASS);
@@ -507,16 +458,16 @@ fn test_parse_game() {
     assert(game.get_trap_count() == 2, game.get_trap_count());
     assert(game.get_their_trap_count() == 0, game.get_their_trap_count());
 
-    // assert(game.my_chars[0].get_x() == 2);
-    // assert(game.my_chars[0].get_y() == 2);
-    // assert(game.my_chars[1].get_x() == 2);
-    // assert(game.my_chars[1].get_y() == 3);
-    // assert(game.my_chars[2].get_x() == 2);
-    // assert(game.my_chars[2].get_y() == 4);
-    // assert(game.my_chars[3].get_x() == 2);
-    // assert(game.my_chars[3].get_y() == 5);
-    // assert(game.my_chars[4].get_x() == 2);
-    // assert(game.my_chars[4].get_y() == 6);
+    assert(game.my_chars[0].get_x() == 2);
+    assert(game.my_chars[0].get_y() == 2);
+    assert(game.my_chars[1].get_x() == 2);
+    assert(game.my_chars[1].get_y() == 3);
+    assert(game.my_chars[2].get_x() == 2);
+    assert(game.my_chars[2].get_y() == 4);
+    assert(game.my_chars[3].get_x() == 2);
+    assert(game.my_chars[3].get_y() == 5);
+    assert(game.my_chars[4].get_x() == 2);
+    assert(game.my_chars[4].get_y() == 6);
 
     assert(game.their_chars[0].get_x() == 22);
     assert(game.their_chars[0].get_y() == 2);
@@ -527,11 +478,11 @@ fn test_parse_game() {
     assert(game.their_chars[3].get_x() == 22);
     assert(game.their_chars[3].get_y() == 5);
 
-    // assert(game.my_chars[0].get_health() == 0x64, game.my_chars[0].get_health());
-    // assert(game.my_chars[1].get_health() == 0x64);
-    // assert(game.my_chars[2].get_health() == 0x64);
-    // assert(game.my_chars[3].get_health() == 0x64);
-    // assert(game.my_chars[4].get_health() == 0x64);
+    assert(game.my_chars[0].get_health() == 0x64, game.my_chars[0].get_health());
+    assert(game.my_chars[1].get_health() == 0x64);
+    assert(game.my_chars[2].get_health() == 0x64);
+    assert(game.my_chars[3].get_health() == 0x64);
+    assert(game.my_chars[4].get_health() == 0x64);
 
     assert(game.their_chars[0].get_health() == 0xff);
     assert(game.their_chars[1].get_health() == 0xff);
@@ -539,57 +490,57 @@ fn test_parse_game() {
     assert(game.their_chars[3].get_health() == 0xff);
     assert(game.their_chars[4].get_health() == 0xff);
 
-    // assert(game.my_chars[0].get_energy_per_move() == 0x03);
-    // assert(game.my_chars[1].get_energy_per_move() == 0x04);
-    // assert(game.my_chars[2].get_energy_per_move() == 0x04);
-    // assert(game.my_chars[3].get_energy_per_move() == 0x03);
-    // assert(game.my_chars[4].get_energy_per_move() == 0x04);
+    assert(game.my_chars[0].get_energy_per_move() == 0x03);
+    assert(game.my_chars[1].get_energy_per_move() == 0x04);
+    assert(game.my_chars[2].get_energy_per_move() == 0x04);
+    assert(game.my_chars[3].get_energy_per_move() == 0x03);
+    assert(game.my_chars[4].get_energy_per_move() == 0x04);
 
-    // assert(game.their_chars[0].get_energy_per_move() == 0x03);
-    // assert(game.their_chars[1].get_energy_per_move() == 0x03);
-    // assert(game.their_chars[2].get_energy_per_move() == 0x03);
-    // assert(game.their_chars[3].get_energy_per_move() == 0x03);
-    // assert(game.their_chars[4].get_energy_per_move() == 0x03);
+    assert(game.their_chars[0].get_energy_per_move() == 0x03);
+    assert(game.their_chars[1].get_energy_per_move() == 0x03);
+    assert(game.their_chars[2].get_energy_per_move() == 0x03);
+    assert(game.their_chars[3].get_energy_per_move() == 0x03);
+    assert(game.their_chars[4].get_energy_per_move() == 0x03);
 
-    // assert(game.my_chars[0].get_id() == 0);
-    // assert(game.my_chars[1].get_id() == 1);
-    // assert(game.my_chars[2].get_id() == 2);
-    // assert(game.my_chars[3].get_id() == 3);
-    // assert(game.my_chars[4].get_id() == 4);
+    assert(game.my_chars[0].get_id() == 0);
+    assert(game.my_chars[1].get_id() == 1);
+    assert(game.my_chars[2].get_id() == 2);
+    assert(game.my_chars[3].get_id() == 3);
+    assert(game.my_chars[4].get_id() == 4);
 
-    // assert(game.their_chars[0].get_id() == 0);
-    // assert(game.their_chars[1].get_id() == 1);
-    // assert(game.their_chars[2].get_id() == 2);
-    // assert(game.their_chars[3].get_id() == 3);
-    // assert(game.their_chars[4].get_id() == 4);
+    assert(game.their_chars[0].get_id() == 0);
+    assert(game.their_chars[1].get_id() == 1);
+    assert(game.their_chars[2].get_id() == 2);
+    assert(game.their_chars[3].get_id() == 3);
+    assert(game.their_chars[4].get_id() == 4);
 
-    // assert(game.my_chars[0].get_target_x() == 31, game.my_chars[0].get_target_x());
-    // assert(game.my_chars[0].get_target_y() == 15, game.my_chars[0].get_target_y());
-    // assert(game.my_chars[1].get_target_x() == 31, game.my_chars[1].get_target_x());
-    // assert(game.my_chars[1].get_target_y() == 15, game.my_chars[1].get_target_y());
-    // assert(game.my_chars[2].get_target_x() == 22, game.my_chars[2].get_target_x());
-    // assert(game.my_chars[2].get_target_y() ==  4, game.my_chars[2].get_target_y());
-    // assert(game.my_chars[3].get_target_x() == 31, game.my_chars[3].get_target_x());
-    // assert(game.my_chars[3].get_target_y() == 15, game.my_chars[3].get_target_y());
-    // assert(game.my_chars[4].get_target_x() == 31, game.my_chars[4].get_target_x());
-    // assert(game.my_chars[4].get_target_y() == 15, game.my_chars[4].get_target_y());
+    assert(game.my_chars[0].get_target_x() == 31, game.my_chars[0].get_target_x());
+    assert(game.my_chars[0].get_target_y() == 15, game.my_chars[0].get_target_y());
+    assert(game.my_chars[1].get_target_x() == 31, game.my_chars[1].get_target_x());
+    assert(game.my_chars[1].get_target_y() == 15, game.my_chars[1].get_target_y());
+    assert(game.my_chars[2].get_target_x() == 22, game.my_chars[2].get_target_x());
+    assert(game.my_chars[2].get_target_y() ==  4, game.my_chars[2].get_target_y());
+    assert(game.my_chars[3].get_target_x() == 31, game.my_chars[3].get_target_x());
+    assert(game.my_chars[3].get_target_y() == 15, game.my_chars[3].get_target_y());
+    assert(game.my_chars[4].get_target_x() == 31, game.my_chars[4].get_target_x());
+    assert(game.my_chars[4].get_target_y() == 15, game.my_chars[4].get_target_y());
 
-    // // assert(game.their_chars[0].get_target_x() == 0xff);
-    // // assert(game.their_chars[0].get_target_y() == 0xff);
-    // // assert(game.their_chars[1].get_target_x() == 0xff);
-    // // assert(game.their_chars[1].get_target_y() == 0xff);
-    // // assert(game.their_chars[2].get_target_x() == 0xff);
-    // // assert(game.their_chars[2].get_target_y() == 0xff);
-    // // assert(game.their_chars[3].get_target_x() == 0xff);
-    // // assert(game.their_chars[3].get_target_y() == 0xff);
-    // // assert(game.their_chars[4].get_target_x() == 0xff);
-    // // assert(game.their_chars[4].get_target_y() == 0xff);
+    // assert(game.their_chars[0].get_target_x() == 0xff);
+    // assert(game.their_chars[0].get_target_y() == 0xff);
+    // assert(game.their_chars[1].get_target_x() == 0xff);
+    // assert(game.their_chars[1].get_target_y() == 0xff);
+    // assert(game.their_chars[2].get_target_x() == 0xff);
+    // assert(game.their_chars[2].get_target_y() == 0xff);
+    // assert(game.their_chars[3].get_target_x() == 0xff);
+    // assert(game.their_chars[3].get_target_y() == 0xff);
+    // assert(game.their_chars[4].get_target_x() == 0xff);
+    // assert(game.their_chars[4].get_target_y() == 0xff);
 
-    // assert(game.my_chars[0].get_status() == 0);
-    // assert(game.my_chars[1].get_status() == 0);
-    // assert(game.my_chars[2].get_status() == 2);
-    // assert(game.my_chars[3].get_status() == 0);
-    // assert(game.my_chars[4].get_status() == 0);
+    assert(game.my_chars[0].get_status() == 0);
+    assert(game.my_chars[1].get_status() == 0);
+    assert(game.my_chars[2].get_status() == 2);
+    assert(game.my_chars[3].get_status() == 0);
+    assert(game.my_chars[4].get_status() == 0);
 
     assert(game.their_chars[0].get_status() == 0);
     assert(game.their_chars[1].get_status() == 0);

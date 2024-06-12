@@ -232,14 +232,14 @@ fn test_is_neighbor() {
     let mut class = KNIGHT;
     let c = Character {
         id: 0,
-        x: &mut 0,
-        y: &mut 4,
-        status: &mut 0,
-        health: &mut 100,
-        class: &mut class,
-        has_been_seen: &mut 0,
-        target_x: &mut 0,
-        target_y: &mut 0,
+        x: 0,
+        y: 4,
+        status: 0,
+        health: 100,
+        class: class,
+        has_been_seen: 0,
+        target_x: 0,
+        target_y: 0,
         damage: 123,
     };
 

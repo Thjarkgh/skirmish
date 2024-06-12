@@ -17,16 +17,23 @@ global class_damage = [
     16, // MAGE
 ];
 
+struct Coordinates {
+    x: u8,
+    y: u8,
+}
+
 struct Character {
     id: u8,
-    x: &mut u8, // 5 bit
-    y: &mut u8, // 4 bit
-    class: &mut u8, // 3 bit
-    status: &mut u8, // 0 = idle, 1-15 = continuing action => 4 bit
-    health: &mut u8,
-    has_been_seen: &mut u1,
-    target_x: &mut u8,
-    target_y: &mut u8,
+    // pos: Coordinates,
+    // target: Coordinates,
+    x: u8, // 5 bit
+    y: u8, // 4 bit
+    class: u8, // 3 bit
+    status: u8, // 0 = idle, 1-15 = continuing action => 4 bit
+    health: u8,
+    has_been_seen: u1,
+    target_x: u8,
+    target_y: u8,
     damage: u8,
 }
 
@@ -36,39 +43,39 @@ impl Character {
     }
 
     pub fn get_x(self) -> u8 {
-        *self.x
+        self.x
     }
 
     pub fn get_y(self) -> u8 {
-        *self.y
+        self.y
     }
 
     pub fn get_class(self) -> u8 {
-        *self.class
+        self.class
     }
 
     pub fn get_status(self) -> u8 {
-        *self.status
+        self.status
     }
 
     pub fn get_health(self) -> u8 {
-        *self.health
+        self.health
     }
 
     pub fn get_has_been_seen(self) -> u1 {
-        *self.has_been_seen
+        self.has_been_seen
     }
 
     pub fn get_target_x(self) -> u8 {
-        *self.target_x
+        self.target_x
     }
 
     pub fn get_target_y(self) -> u8 {
-        *self.target_y
+        self.target_y
     }
 
     pub fn get_energy_per_move(self) -> u8 {
-        if (*self.class == KNIGHT) | (*self.class == MAGE) | (*self.class == RITUALIST) {
+        if (self.class == KNIGHT) | (self.class == MAGE) | (self.class == RITUALIST) {
             4
         } else {
             3
@@ -76,7 +83,7 @@ impl Character {
     }
 
     pub fn can_sneak(self) -> bool {
-        *self.class == ROGUE
+        self.class == ROGUE
     }
 
     pub fn get_energy_per_sneak(self) -> u8 {
@@ -87,61 +94,61 @@ impl Character {
         }
     }
 
-    pub fn set_pos(mut self, x: u8, y: u8) -> bool {
+    pub fn set_pos(&mut self, x: u8, y: u8) -> bool {
         let success = ((x < WIDTH) & (y < HEIGHT)) | ((x == 255) | (y == 255));
         if success {
-            *self.x = x;
-            *self.y = y;
+            (*self).x = x;
+            (*self).y = y;
         }
         success
     }
 
-    pub fn set_class(mut self, class: u8) -> bool {
-        let success = (class < crate::CLASS_COUNT) & ((*self.class == crate::UNKNOWN_CLASS) | (*self.class == class));
+    pub fn set_class(&mut self, class: u8) -> bool {
+        let success = (class < crate::CLASS_COUNT) & ((self.class == crate::UNKNOWN_CLASS) | (self.class == class));
         if success {
-            *self.class = class;
+            (*self).class = class;
         }
         success
     }
 
-    pub fn set_status(mut self, status: u8) -> bool {
-        let success = (status < crate::STATUS_COUNT) & ((*self.status == 0) | (status == 0) | (*self.status + 1 == status));
+    pub fn set_status(&mut self, status: u8) -> bool {
+        let success = (status < crate::STATUS_COUNT) & ((self.status == 0) | (status == 0) | (self.status + 1 == status));
         if success {
-            *self.status = status;
+            (*self).status = status;
         }
         success
     }
 
-    pub fn set_health(mut self, health: u8) -> bool {
-        *self.health = health;
+    pub fn set_health(&mut self, health: u8) -> bool {
+        (*self).health = health;
         true
     }
 
-    pub fn set_has_been_seen(mut self, has_been_seen: u1) -> bool {
-        let success = (*self.has_been_seen == has_been_seen) | (*self.has_been_seen == 0);
+    pub fn set_has_been_seen(&mut self, has_been_seen: u1) -> bool {
+        let success = (self.has_been_seen == has_been_seen) | (self.has_been_seen == 0);
         if success {
-            *self.has_been_seen = has_been_seen;
+            (*self).has_been_seen = has_been_seen;
         }
         success
     }
 
-    pub fn set_target(mut self, target_x: u8, target_y: u8) -> bool {
+    pub fn set_target(&mut self, target_x: u8, target_y: u8) -> bool {
         let success = ((target_x < WIDTH) & (target_y < HEIGHT)) | ((target_x == 255) & (target_y == 255));
         if success {
-            *self.target_x = target_x;
-            *self.target_y = target_y;
+            (*self).target_x = target_x;
+            (*self).target_y = target_y;
         }
         success
     }
 
     pub fn is_valid(self) -> bool {
-        ((*self.x < WIDTH) & (*self.y < HEIGHT)) | ((*self.x == 255) & (*self.y == 255)) &
-        ((*self.class < CLASS_COUNT) & (*self.status < STATUS_COUNT)) &
-        ((*self.target_x < WIDTH) & (*self.target_y < HEIGHT)) | ((*self.target_x == 255) & (*self.target_y == 255))
+        ((self.x < WIDTH) & (self.y < HEIGHT)) | ((self.x == 255) & (self.y == 255)) &
+        ((self.class < CLASS_COUNT) & (self.status < STATUS_COUNT)) &
+        ((self.target_x < WIDTH) & (self.target_y < HEIGHT)) | ((self.target_x == 255) & (self.target_y == 255))
     }
 
     pub fn has_known_pos(self) -> u8 {
-        if (*self.x != 255) & (*self.y != 255) {
+        if (self.x != 255) & (self.y != 255) {
             1
         } else {
             0
@@ -149,7 +156,7 @@ impl Character {
     }
 
     pub fn has_known_target(self) -> u8 {
-        if (*self.target_x != 255) & (*self.target_y != 255) {
+        if (self.target_x != 255) & (self.target_y != 255) {
             1
         } else {
             0
@@ -160,30 +167,30 @@ impl Character {
         let is_valid = self.is_valid();
         let has_known_pos = self.has_known_pos();
         let has_known_target = self.has_known_target();
-        let packed_x = *self.x | (*self.class << 5);
-        let packed_y = *self.y | (*self.status << 4);
-        let packed_target_x = (*self.target_x & 31) | (has_known_pos << 5) | (has_known_target << 6);
-        let packed_target_y = *self.target_y & 15;
+        let packed_x = self.x | (self.class << 5);
+        let packed_y = self.y | (self.status << 4);
+        let packed_target_x = (self.target_x & 31) | (has_known_pos << 5) | (has_known_target << 6);
+        let packed_target_y = self.target_y & 15;
         crate::Result {
-            value: [packed_x, packed_y, *self.health, packed_target_x, packed_target_y, 0],
+            value: [packed_x, packed_y, self.health, packed_target_x, packed_target_y, 0],
             success: is_valid
         }
     }
 
     pub fn create_character(id: u8, x: u8, y: u8, class: u8) -> crate::Result<Character> {
-        let mut xx = x;
-        let mut yy = y;
-        let mut cc = class;
+        // let mut xx = x;
+        // let mut yy = y;
+        // let mut cc = class;
         let c = Character {
             id: id,
-            x: &mut xx,
-            y: &mut yy,
-            class: &mut cc,
-            status: &mut 0,
-            health: &mut 0,
-            has_been_seen: &mut 0,
-            target_x: &mut 255,
-            target_y: &mut 255,
+            x: x,
+            y: y,
+            class: class,
+            status: 0,
+            health: 0,
+            has_been_seen: 0,
+            target_x: 255,
+            target_y: 255,
             damage: class_damage[class],
         };
         crate::Result {
@@ -206,26 +213,26 @@ impl Character {
         let target_y_packed = split[2 + id * 6 + 4]; // 4 bit target y, 4 bit unused
         // one byte left for future use
 
-        let is_visible = (target_x_packed >> 5) & 1;
+        let is_visible = ((target_x_packed >> 5) & 1) as u1;
 
-        let mut x = x_packed & 31;
-        let mut y = y_packed & 15;
-        let mut class = (x_packed >> 5) & 7;
-        let mut status = (y_packed >> 4) & 15;
-        let mut health = split[2 + id * 6 + 2];
-        let mut target_x = target_x_packed & 31;
-        let mut target_y = target_y_packed & 15;
+        let x = x_packed & 31;
+        let y = y_packed & 15;
+        let class = (x_packed >> 5) & 7;
+        let status = (y_packed >> 4) & 15;
+        let health = split[2 + id * 6 + 2];
+        let target_x = target_x_packed & 31;
+        let target_y = target_y_packed & 15;
 
         let mut result = Character {
             id: id,
-            x: &mut x,
-            y: &mut y,
-            class: &mut class,
-            status: &mut status,
-            health: &mut health,
-            has_been_seen: &mut 0, // TODO 
-            target_x: &mut target_x,
-            target_y: &mut target_y,
+            x: x,
+            y: y,
+            class: class,
+            status: status,
+            health: health,
+            has_been_seen: is_visible, // TODO 
+            target_x: target_x,
+            target_y: target_y,
             damage: class_damage[class],
         };
 
@@ -235,9 +242,9 @@ impl Character {
             success &= result.set_target(255, 255);
         }
 
-        if is_visible != 1 {
-            success &= result.set_pos(255, 255);
-        }
+        // if is_visible != 1 {
+        //     success &= result.set_pos(255, 255);
+        // }
         if result.get_health() == 255 {
             success &= (is_visible != 1);
             // result.set_pos(255, 255);
@@ -261,20 +268,20 @@ pub fn get_test_my_character(id: u8, x: u8, y: u8, class: u8) -> Character {
     assert(x < WIDTH);
     assert(y < HEIGHT);
 
-    let mut xx = x;
-    let mut yy = y;
-    let mut cc = class;
+    // let mut xx = x;
+    // let mut yy = y;
+    // let mut cc = class;
 
     Character {
         id: id,
-        x: &mut xx,
-        y: &mut yy,
-        class: &mut cc,
-        status: &mut 0,
-        health: &mut 100,
-        has_been_seen: &mut 0,
-        target_x: &mut 255,
-        target_y: &mut 255,
+        x: x,
+        y: y,
+        class: class,
+        status: 0,
+        health: 100,
+        has_been_seen: 0,
+        target_x: 255,
+        target_y: 255,
         damage: class_damage[class],
     }
 }
@@ -285,20 +292,20 @@ pub fn get_test_their_character(id: u8, x: u8, y: u8, class: u8) -> Character {
     assert(x < WIDTH);
     assert(y < HEIGHT);
 
-    let mut xx = x;
-    let mut yy = y;
-    let mut cc = class;
+    // let mut xx = x;
+    // let mut yy = y;
+    // let mut cc = class;
 
     Character {
         id: id,
-        x: &mut xx,
-        y: &mut yy,
-        class: &mut cc,
-        status: &mut 0,
-        health: &mut 255,
-        has_been_seen: &mut 0,
-        target_x: &mut 255,
-        target_y: &mut 255,
+        x: x,
+        y: y,
+        class: class,
+        status: 0,
+        health: 255,
+        has_been_seen: 0,
+        target_x: 255,
+        target_y: 255,
         damage: class_damage[class],
     }
 }
@@ -307,14 +314,14 @@ pub fn get_test_their_character(id: u8, x: u8, y: u8, class: u8) -> Character {
 fn test_serialize_character() {
     let mut character = Character {
         id: 4,
-        x: &mut 21,
-        y: &mut 9,
-        class: &mut 5,
-        status: &mut 9,
-        health: &mut 129,
-        has_been_seen: &mut 0,
-        target_x: &mut 31,
-        target_y: &mut 15,
+        x: 21,
+        y: 9,
+        class: 5,
+        status: 9,
+        health: 129,
+        has_been_seen: 0,
+        target_x: 31,
+        target_y: 15,
         damage: class_damage[0],
     };
     let field_result = character.serialize();
@@ -368,7 +375,7 @@ fn test_parse_character() {
     assert(character.get_class() == 5);
     assert(character.get_status() == 9);
     assert(character.get_health() == 129);
-    assert(character.get_has_been_seen() == 0);
+    assert(character.get_has_been_seen() == 1);
     assert(character.get_target_x() == 31);
     assert(character.get_target_y() == 15);
 
@@ -381,7 +388,7 @@ fn test_parse_character() {
     assert(character_max.get_class() == 7);
     assert(character_max.get_status() == 15);
     assert(character_max.get_health() == 255);
-    assert(character_max.get_has_been_seen() == 0);
+    assert(character_max.get_has_been_seen() == 1);
     assert(character_max.get_target_x() == 31);
     assert(character_max.get_target_y() == 15);
 
@@ -389,8 +396,8 @@ fn test_parse_character() {
     assert(character_min_result.success);
     let character_min = character_min_result.value;
     assert(character_min.get_id() == 0);
-    assert(character_min.get_x() == 255);
-    assert(character_min.get_y() == 255);
+    assert(character_min.get_x() == 0);
+    assert(character_min.get_y() == 0);
     assert(character_min.get_class() == 0);
     assert(character_min.get_status() == 0);
     assert(character_min.get_health() == 0);
@@ -400,18 +407,35 @@ fn test_parse_character() {
 }
 
 #[test]
+fn test_parse_character_as_in_game() {
+    let data: Field = 0x1602ff1f0f001603ff1f0f001604ff1f0f001605ff1f0f001606ff1f0f00;
+    let character_result = Character::parse_character(0, data);
+    assert(character_result.success);
+    let character = character_result.value;
+    assert(character.get_id() == 0);
+    assert(character.get_x() == 22, character.get_x());
+    assert(character.get_y() == 2, character.get_y());
+    assert(character.get_class() == 0, character.get_class());
+    assert(character.get_status() == 0, character.get_status());
+    assert(character.get_health() == 255);
+    assert(character.get_has_been_seen() == 0);
+    assert(character.get_target_x() == 255);
+    assert(character.get_target_y() == 255);
+}
+
+#[test]
 fn test_character_setters() {
     let mut class = ROGUE;
-    let mut character = Character {
+    let mut character = &mut Character {
         id: 4,
-        x: &mut 21,
-        y: &mut 9,
-        class: &mut class,
-        status: &mut 9,
-        health: &mut 129,
-        has_been_seen: &mut 0,
-        target_x: &mut 31,
-        target_y: &mut 15,
+        x: 21,
+        y: 9,
+        class: class,
+        status: 9,
+        health: 129,
+        has_been_seen: 0,
+        target_x: 31,
+        target_y: 15,
         damage: class_damage[class],
     };
     assert(character.get_x() == 21);
@@ -431,7 +455,7 @@ fn test_character_setters() {
     assert(character.get_energy_per_sneak() == 6);
     assert(character.get_energy_per_move() == 3);
     assert(!character.set_class(KNIGHT));
-    *character.class = crate::UNKNOWN_CLASS;
+    (*character).class = crate::UNKNOWN_CLASS;
     assert(character.set_class(KNIGHT));
     assert(character.get_class() == KNIGHT);
     assert(!character.can_sneak());
