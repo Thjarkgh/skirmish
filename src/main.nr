@@ -1,3 +1,15 @@
+mod action;
+use action::Action;
+mod character;
+use character::Character;
+mod event;
+use event::Event;
+mod roster;
+use roster::Roster;
+mod obstacle;
+use obstacle::Obstacle;
+use obstacle::{ parse_obstacles, serialize_obstacles };
+mod map;
 use dep::std;
 
 // MAP
@@ -16,45 +28,48 @@ global CLASS_COUNT = 6 as u8;
 // ACTIONS
 global WAIT = 0 as u8;
 global SNEAK = 1 as u8;
-global MOVE = 2 as u8;
-global RITUAL = 3 as u8;
-global SEARCH = 4 as u8;
-global ATTACK = 5 as u8;
+global MOVE = 2 as u8;          // => SEE_MOVE
+global RITUAL = 3 as u8;        // => SEE_RITUAL | WIN
+global SEARCH = 4 as u8;        // => SEE_SEARCH_TRAP
+global ATTACK = 5 as u8;        // => RECEIVE_ATTACK | DESTROY // affects my obstacles; TODO: with more attack types might also affect other own characters
 global SET_TRAP = 6 as u8;
-global CAST_FIREBALL = 7 as u8;
-global DRAW = 8 as u8;
-global TRIGGER_TRAP = 9 as u8;
-global DISARM_TRAP = 10 as u8;
+global CAST_FIREBALL = 7 as u8; // => SEE_CAST | SEE_SPELL | DESTROY // affects other characters if status == FIREBALL_ROUNDS_FOR_CAST
+global DRAW = 8 as u8;          // => SEE_DRAW
+//global TRIGGER_TRAP = 9 as u8;  // => TRIGGERED_TRAP ?????????
+global DISARM_TRAP = 10 as u8;  // => DESTROY
 global ACTION_COUNT = 11 as u8;
 
 // EVENTS
 global NO_EVENT = 0  as u8;
-global SEE_MOVE = 1  as u8;// actor_id = their_char when receive
-global SEE_RITUAL = 2  as u8; // actor_id = their_char when receive
-global SEE_SEARCH_TRAP = 3  as u8; // actor_id = their_char when receive
-global RECEIVE_ATTACK = 4  as u8; // actor_id = their_char when receive
-global SEE_CAST = 5 as u8; // actor_id = their_char when receive
-global SEE_DRAW = 6 as u8; // actor_id = their_char when receive
-global TRIGGERED_TRAP = 7 as u8; // actor_id = my_char when receive
-global WIN = 8 as u8;
-global FOUND_TRAP = 9 as u8; // actor_id = my_char when receive
-global SEE_CHARS = 10 as u8; // actor_id = their_char when receive, got health & class
-global RECEIVE_DAMAGE = 11 as u8; // actor_id = their_char when receive
-global DESTROY = 12 as u8; // actor_id = tile
-global DEATH = 13 as u8; // actor_id = their_char when receive
-global EVENT_COUNT = 14 as u8;
+global DESTROY = 1 as u8;          // actor_id = their_char or their_object when receive - use coordinates to determine tile or trap that got destroyed and update map
+global DISCOVER = 2 as u8;         // actor_id = their_char or their_object when receive - handle to update enemy positions, got health & class (this is for all chars, not just the active one)
+global SEE_MOVE = 3  as u8;        // actor_id = their_char or their_object when receive - handle to update enemy positions => DISCOVER
+//global SEE_SPELL = 4  as u8;       // actor_id = their_char when receive - need to handle effect via coordinates, => RECEIVE_DAMAGE | DESTROY | LOSE // also need to handle my obstacles
+global SEE_SEARCH_TRAP = 5  as u8; // actor_id = their_char when receive - need to create found trap event if there is a trap nearby => FOUND_TRAP
+global SEE_RITUAL = 6  as u8;      // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
+global SEE_CAST = 7 as u8;         // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
+global SEE_DRAW = 8 as u8;         // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
+global RECEIVE_DAMAGE = 9 as u8;   // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client
+global RECEIVE_ATTACK = 10 as u8;  // actor_id = 0 when receive - need to handle damage => RECEIVE_DAMAGE | DESTROY | LOSE // also need to handle in my obstacles
+global TRIGGERED_TRAP = 11 as u8;  // actor_id = my_char when receive - need to handle damage (for now, later on we might want to handle other effects as well) => RECEIVE_DAMAGE
+global FOUND_TRAP = 12 as u8;      // actor_id = my_char when receive - no need to handle, only important to have on-chain for the client
+global WIN = 13 as u8;
+global LOSE = 14 as u8;
+global EVENT_COUNT = 15 as u8;
 
 // ATTACKS
 global ATTACK_MELEE = 0 as u8;
 global ATTACK_RANGED = 1 as u8;
 global ATTACK_FIREBALL = 2 as u8;
 global ATTACK_COUNT = 3 as u8;
+// TODO: instead of enum, use a global array of structs with damage, range, etc.
+
 
 // TILES
 global EMPTY = 0 as u8;
-global UNKNOWN_CLASS_TILE = 6 as u8;
-global WALL = 7 as u8;
-global WATER = 8 as u8;
+global WALL = 6 as u8;
+global WATER = 7 as u8;
+global UNKNOWN_CLASS_TILE = 8 as u8;
 global NON_EMPTY_WALKABLE_TILE_MIN = 9 as u8;
 global FLAG = 9 as u8;
 global TRAP = 10 as u8;
@@ -66,6 +81,8 @@ global FOG = 15 as u8;
 global TILE_COUNT = 16 as u8;
 
 // STATUS
+global RITUAL_ROUNDS_FOR_WIN = 16 as u8;
+global FIREBALL_ROUNDS_FOR_CAST = 3 as u8;
 global STATUS_COUNT = 16  as u8; // just to be more in line with the other constants, actually used as a counter
 
 // GAMEPLAY
@@ -76,154 +93,10 @@ global MAX_ACTIONS = 8;
 global MAX_EVENTS = 8;
 global EVENTS_BUFFER_SIZE = 8;
 global EVENTS_BUFFER_MASK = 7; // has to be 2^n - 1
-
-struct Result<T> {
-    value: T,
-    success: bool
-}
-
-////////////// CHARACTER
-mod character;
-use character::Character;
-use character::get_test_my_character;
-use character::get_test_their_character;
-mod trap;
-use trap::Trap;
-use trap::parse_traps;
-use trap::serialize_traps;
-mod map;
-use map::Map;
-use map::get_test_map;
-mod game;
-use game::Game;
-mod event;
-use event::Event;
-use event::build_std_event;
-use event::build_value_event;
-use event::build_subtype_value_event;
-use event::parse_event;
-
-fn move_to(map: &mut Map, actor: &mut Character, energy: &mut u8, to_x: u8, to_y: u8, exec: bool) -> Result<Field> {
-    let mut success = true;
-    if exec {
-    let can_move_to = map.can_move_to(to_x, to_y);
-    success = can_move_to.success;
-    // let success = can_move_to.success & can_move_to.value &
-    //               ((*actor).get_class() > 0) & ((*actor).get_class() < CLASS_COUNT) &
-    //               ((*actor).get_x() < WIDTH) & ((*actor).get_y() < HEIGHT) &
-    //               (to_x < WIDTH) & (to_y < HEIGHT) &
-    //               (map[(*actor).get_y()][(*actor).get_x()] == (*actor).get_class());
-    // assert(can_move_to(*map, to_x, to_y) == 1);
-    // assert((*actor).get_class() > 0);
-    // assert((*actor).get_class() < CLASS_COUNT);
-    // assert((*actor).get_x() < WIDTH);
-    // assert((*actor).get_y() < HEIGHT);
-    // assert(to_x < WIDTH);
-    // assert(to_y < HEIGHT);
-    // assert(map[(*actor).get_y()][(*actor).get_x()] == (*actor).get_class());
-    let current_tile = map.get(actor.get_x(), actor.get_y());
-    success &= current_tile.success & (current_tile.value == actor.get_class());
-
-    // assert_neighbor((*actor), to_x, to_y);
-    let is_neighbor = Map::is_neighbor(actor.get_x(), actor.get_y(), to_x, to_y);
-    success &= is_neighbor.success;
-
-    let energy_cost = actor.get_energy_per_move();
-        if energy_cost > *energy {
-            *energy = 0;
-            success = false;
-            //Result { value: 0, success: false }
-        } else {
-            *energy = *energy - energy_cost;
-        }
-    //}
-
-    let erase_result = map.set(actor.get_x(), actor.get_y(), 0); // TODO: instead of setting to 0, set to whatever it was before actor moved there!
-    let set_map_result = map.set(to_x, to_y, actor.get_class());
-    let set_char_result = actor.set_pos(to_x, to_y); //actor=>set_pos(to_x, to_y);
-    // if (!erase_result) | (!set_map_result) | (!set_char_result) {
-    //     Result { value: 0, success: false }
-    // }
-    success &= erase_result & set_map_result & set_char_result;
-    }
-    Result {
-        value: build_std_event(SEE_MOVE, actor.get_id(), to_x, to_y),
-        success: success
-    }
-}
-
-#[test]
-fn test_move_to() {
-    let mut map_result = Map::build([
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [WALL, WALL, EMPTY,WALL, WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [WALL, EMPTY,KNIGHT,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, EMPTY,EMPTY,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, WALL, EMPTY,WALL, WALL, 0, 0, EMPTY,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, EMPTY,0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
-    ]);
-    assert(map_result.success == true);
-    let mut map = map_result.value;
-    let mut class = KNIGHT;
-    let mut c = Character {
-        id: 0,
-        x: &mut 2,
-        y: &mut 4,
-        status: &mut 0,
-        health: &mut 100,
-        class: &mut class,
-        has_been_seen: &mut 0,
-        target_x: &mut 0,
-        target_y: &mut 0,
-        damage: 123,
-    };
-    let mut energy = 12;
-    let result = move_to(&mut map, &mut c, &mut energy, 2, 3, true);
-    assert(result.success == true);
-    assert(result.value == build_std_event(SEE_MOVE, 0, 2, 3));
-}
-
-fn sneak_to(map: &mut Map, actor: &mut Character, energy: &mut u8, to_x: u8, to_y: u8, exec: bool) -> bool {
-    let mut success = true;
-    if exec {
-        let can_move_to = map.can_move_to(to_x, to_y);
-        success &= can_move_to.success;
-        let current_tile = map.get(actor.get_x(), actor.get_y());
-        success &= current_tile.success & (current_tile.value == actor.get_class());
-        // assert(can_move_to(*map, to_x, to_y) == 1);
-        // assert((*actor).get_class() == ROGUE);
-        // assert(((*actor).get_x() < WIDTH) & ((*actor).get_y() < HEIGHT));
-        // assert((to_x < WIDTH) & (to_y < HEIGHT));
-        // assert(*energy >= 6);
-        
-        // assert_neighbor((*actor), to_x, to_y);
-        let is_neighbor = Map::is_neighbor(actor.get_x(), actor.get_y(), to_x, to_y);
-        success &= is_neighbor.success;
-
-        let can_sneak = actor.can_sneak();
-        success &= can_sneak;
-
-        let energy_cost = (*actor).get_energy_per_sneak();
-        if energy_cost > *energy {
-            *energy = 0;
-            success = false;
-            //Result { value: 0, success: false }
-        } else {
-            *energy = *energy - energy_cost;
-        }
-
-        let erase_result = map.set(actor.get_x(), actor.get_y(), 0); // TODO: instead of setting to 0, set to whatever it was before actor moved there!
-        let set_map_result = map.set(to_x, to_y, actor.get_class());
-        let set_char_result = actor.set_pos(to_x, to_y); //actor=>set_pos(to_x, to_y);
-        success &= erase_result & set_map_result & set_char_result;
-    }
-
-    success
-}
+global MAX_OBSTACLES = 24;
+global MAX_CHARACTERS = 5;
+global SERIALIZED_OBSTACLES_ARRAY_SIZE = 3; // TODO: (MAX_OBSTACLES + 9) / 10;
+global SERIALIZED_OBSTACLES_PER_FIELD = 8; // TODO: need to verify that SERIALIED_OBSTACLES_ARRAY_SIZE * SERIALIZED_OBSTACLES_PER_FIELD = MAX_OBSTACLES!
 
 fn get_actor_from_move(mut move: u32) -> u8 {
     if (move % 2) == 1 {
@@ -233,28 +106,234 @@ fn get_actor_from_move(mut move: u32) -> u8 {
     single_digit as u8
 }
 
-fn get_data_hash(secret: [u8], characters: [u8], their_characters: [u8], traps: [u8], map: [[u8; WIDTH]; HEIGHT], searched_traps: [u8]) -> [u8; 32] {
-    assert(secret.len() == 32);
-    assert(characters.len() == 32);
-    assert(traps.len() == 32);
-    assert(their_characters.len() == 32);
+fn main(
+    // my_char_0: Character,
+    // my_char_1: Character,
+    // my_char_2: Character,
+    // my_char_3: Character,
+    // my_char_4: Character,
+    // their_char_0: Character,
+    // their_char_1: Character,
+    // their_char_2: Character,
+    // their_char_3: Character,
+    // their_char_4: Character,
+    // my_chars: Roster,
+    // their_chars: Roster,
+    // action_0: Action,
+    // action_1: Action,
+    // action_2: Action,
+    // action_3: Action,
+    // action_4: Action,
+    secret: Field,
+    my_chars: Field,
+    my_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE],
+    enemy_objects: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + MAX_CHARACTERS],
+    actions: [Field; MAX_ACTIONS],
+    move: pub u32,
+    events: pub [Field; MAX_EVENTS],
+    result_events: pub [Field; MAX_EVENTS],
+    gamestate_after_hash: pub Field,
+    // event_0: pub Event,
+    // event_1: pub Event,
+    // event_2: pub Event,
+    // event_3: pub Event,
+    // event_4: pub Event,
+    // event_5: pub Event,
+    // event_6: pub Event,
+    // event_7: pub Event,
+) {
+    let events: [Event; MAX_EVENTS] = events.map(|event| Event::from_field(event));
+    let mut my_char_0 = Character::parse(0, my_chars, events);
+    let mut my_char_1 = Character::parse(1, my_chars, events);
+    let mut my_char_2 = Character::parse(2, my_chars, events);
+    let mut my_char_3 = Character::parse(3, my_chars, events);
+    let mut my_char_4 = Character::parse(4, my_chars, events);
 
-    let mut data: [u8; WIDTH * HEIGHT + 32 * 5] = [0; WIDTH * HEIGHT + 32 * 5];
-    for i in 0..HEIGHT {
-        for j in 0..WIDTH {
-            assert(i < 10);
-            assert(j < WIDTH);
-            let index = (i as u64) * (WIDTH as u64) + (j as u64);
-            data[index] = map[i][j];
+    let actor_id = get_actor_from_move(move);
+    let mut actor = Character::parse(actor_id, my_chars, events);
+    
+    let actions = actions.map(|action| Action::from_field(action));
+    
+    assert(MAX_OBSTACLES == 24);
+    let my_obstacles_parsed = parse_obstacles(my_obstacles, events);
+    let mut my_obstacle_0 = my_obstacles_parsed[0];
+    let mut my_obstacle_1 = my_obstacles_parsed[1];
+    let mut my_obstacle_2 = my_obstacles_parsed[2];
+    let mut my_obstacle_3 = my_obstacles_parsed[3];
+    let mut my_obstacle_4 = my_obstacles_parsed[4];
+    let mut my_obstacle_5 = my_obstacles_parsed[5];
+    let mut my_obstacle_6 = my_obstacles_parsed[6];
+    let mut my_obstacle_7 = my_obstacles_parsed[7];
+    let mut my_obstacle_8 = my_obstacles_parsed[8];
+    let mut my_obstacle_9 = my_obstacles_parsed[9];
+    let mut my_obstacle_10 = my_obstacles_parsed[10];
+    let mut my_obstacle_11 = my_obstacles_parsed[11];
+    let mut my_obstacle_12 = my_obstacles_parsed[12];
+    let mut my_obstacle_13 = my_obstacles_parsed[13];
+    let mut my_obstacle_14 = my_obstacles_parsed[14];
+    let mut my_obstacle_15 = my_obstacles_parsed[15];
+    let mut my_obstacle_16 = my_obstacles_parsed[16];
+    let mut my_obstacle_17 = my_obstacles_parsed[17];
+    let mut my_obstacle_18 = my_obstacles_parsed[18];
+    let mut my_obstacle_19 = my_obstacles_parsed[19];
+    let mut my_obstacle_20 = my_obstacles_parsed[20];
+    let mut my_obstacle_21 = my_obstacles_parsed[21];
+    let mut my_obstacle_22 = my_obstacles_parsed[22];
+    let mut my_obstacle_23 = my_obstacles_parsed[23];
+
+    // let mut my_obstacle_0 = Obstacle::parse(0, my_obstacles[0], events);
+    // let mut my_obstacle_1 = Obstacle::parse(1, my_obstacles[1], events);
+    // let mut my_obstacle_2 = Obstacle::parse(2, my_obstacles[2], events);
+    // let mut my_obstacle_3 = Obstacle::parse(3, my_obstacles[3], events);
+    // let mut my_obstacle_4 = Obstacle::parse(4, my_obstacles[4], events);
+    // let mut my_obstacle_5 = Obstacle::parse(5, my_obstacles[5], events);
+    // let mut my_obstacle_6 = Obstacle::parse(6, my_obstacles[6], events);
+    // let mut my_obstacle_7 = Obstacle::parse(7, my_obstacles[7], events);
+    // let mut my_obstacle_8 = Obstacle::parse(8, my_obstacles[8], events);
+    // let mut my_obstacle_9 = Obstacle::parse(9, my_obstacles[9], events);
+    // let mut my_obstacle_10 = Obstacle::parse(10, my_obstacles[10], events);
+    // let mut my_obstacle_11 = Obstacle::parse(11, my_obstacles[11], events);
+    // let mut my_obstacle_12 = Obstacle::parse(12, my_obstacles[12], events);
+    // let mut my_obstacle_13 = Obstacle::parse(13, my_obstacles[13], events);
+    // let mut my_obstacle_14 = Obstacle::parse(14, my_obstacles[14], events);
+    // let mut my_obstacle_15 = Obstacle::parse(15, my_obstacles[15], events);
+    // let mut my_obstacle_16 = Obstacle::parse(16, my_obstacles[16], events);
+    // let mut my_obstacle_17 = Obstacle::parse(17, my_obstacles[17], events);
+    // let mut my_obstacle_18 = Obstacle::parse(18, my_obstacles[18], events);
+    // let mut my_obstacle_19 = Obstacle::parse(19, my_obstacles[19], events);
+    // let mut my_obstacle_20 = Obstacle::parse(20, my_obstacles[20], events);
+    // let mut my_obstacle_21 = Obstacle::parse(21, my_obstacles[21], events);
+    // let mut my_obstacle_22 = Obstacle::parse(22, my_obstacles[22], events);
+    // let mut my_obstacle_23 = Obstacle::parse(23, my_obstacles[23], events);
+
+    let mut energy: u8 = 12;
+    for i in 0..MAX_ACTIONS {
+        let action = actions[i];
+        let result = action.execute(actor, energy);
+        let result_event = result.0;
+        actor = result.1;
+        energy = result.2;
+        
+        if result_event.may_affect_my_other_characters() {
+            // no mutable arrays, so have to do copy-paste
+            let dmg = result_event.get_applied_damage(my_char_0.x, my_char_0.y, my_char_0.class);
+            if dmg > (my_char_0.health as u16) {
+                my_char_0.health = 0;
+            } else if dmg > 0 {
+                my_char_0.health -= (dmg as u8);
+            }
+            let dmg = result_event.get_applied_damage(my_char_1.x, my_char_1.y, my_char_1.class);
+            if dmg > (my_char_1.health as u16) {
+                my_char_1.health = 0;
+            } else if dmg > 0 {
+                my_char_1.health -= (dmg as u8);
+            }
+            let dmg = result_event.get_applied_damage(my_char_2.x, my_char_2.y, my_char_2.class);
+            if dmg > (my_char_2.health as u16) {
+                my_char_2.health = 0;
+            } else if dmg > 0 {
+                my_char_2.health -= (dmg as u8);
+            }
+            let dmg = result_event.get_applied_damage(my_char_3.x, my_char_3.y, my_char_3.class);
+            if dmg > (my_char_3.health as u16) {
+                my_char_3.health = 0;
+            } else if dmg > 0 {
+                my_char_3.health -= (dmg as u8);
+            }
+            let dmg = result_event.get_applied_damage(my_char_4.x, my_char_4.y, my_char_4.class);
+            if dmg > (my_char_4.health as u16) {
+                my_char_4.health = 0;
+            } else if dmg > 0 {
+                my_char_4.health -= (dmg as u8);
+            }
+        }
+
+        if result_event.may_affect_my_obstacles() {
+            let dmg = result_event.get_applied_damage(my_obstacle_0.x, my_obstacle_0.y, my_obstacle_0.obstacle_type);
+            if dmg > 0 { my_obstacle_0.health = safe_subtract_dmg(my_obstacle_0.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_1.x, my_obstacle_1.y, my_obstacle_1.obstacle_type);
+            if dmg > 0 { my_obstacle_1.health = safe_subtract_dmg(my_obstacle_1.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_2.x, my_obstacle_2.y, my_obstacle_2.obstacle_type);
+            if dmg > 0 { my_obstacle_2.health = safe_subtract_dmg(my_obstacle_2.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_3.x, my_obstacle_3.y, my_obstacle_3.obstacle_type);
+            if dmg > 0 { my_obstacle_3.health = safe_subtract_dmg(my_obstacle_3.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_4.x, my_obstacle_4.y, my_obstacle_4.obstacle_type);
+            if dmg > 0 { my_obstacle_4.health = safe_subtract_dmg(my_obstacle_4.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_5.x, my_obstacle_5.y, my_obstacle_5.obstacle_type);
+            if dmg > 0 { my_obstacle_5.health = safe_subtract_dmg(my_obstacle_5.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_6.x, my_obstacle_6.y, my_obstacle_6.obstacle_type);
+            if dmg > 0 { my_obstacle_6.health = safe_subtract_dmg(my_obstacle_6.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_7.x, my_obstacle_7.y, my_obstacle_7.obstacle_type);
+            if dmg > 0 { my_obstacle_7.health = safe_subtract_dmg(my_obstacle_7.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_8.x, my_obstacle_8.y, my_obstacle_8.obstacle_type);
+            if dmg > 0 { my_obstacle_8.health = safe_subtract_dmg(my_obstacle_8.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_9.x, my_obstacle_9.y, my_obstacle_9.obstacle_type);
+            if dmg > 0 { my_obstacle_9.health = safe_subtract_dmg(my_obstacle_9.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_10.x, my_obstacle_10.y, my_obstacle_10.obstacle_type);
+            if dmg > 0 { my_obstacle_10.health = safe_subtract_dmg(my_obstacle_10.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_11.x, my_obstacle_11.y, my_obstacle_11.obstacle_type);
+            if dmg > 0 { my_obstacle_11.health = safe_subtract_dmg(my_obstacle_11.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_12.x, my_obstacle_12.y, my_obstacle_12.obstacle_type);
+            if dmg > 0 { my_obstacle_12.health = safe_subtract_dmg(my_obstacle_12.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_13.x, my_obstacle_13.y, my_obstacle_13.obstacle_type);
+            if dmg > 0 { my_obstacle_13.health = safe_subtract_dmg(my_obstacle_13.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_14.x, my_obstacle_14.y, my_obstacle_14.obstacle_type);
+            if dmg > 0 { my_obstacle_14.health = safe_subtract_dmg(my_obstacle_14.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_15.x, my_obstacle_15.y, my_obstacle_15.obstacle_type);
+            if dmg > 0 { my_obstacle_15.health = safe_subtract_dmg(my_obstacle_15.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_16.x, my_obstacle_16.y, my_obstacle_16.obstacle_type);
+            if dmg > 0 { my_obstacle_16.health = safe_subtract_dmg(my_obstacle_16.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_17.x, my_obstacle_17.y, my_obstacle_17.obstacle_type);
+            if dmg > 0 { my_obstacle_17.health = safe_subtract_dmg(my_obstacle_17.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_18.x, my_obstacle_18.y, my_obstacle_18.obstacle_type);
+            if dmg > 0 { my_obstacle_18.health = safe_subtract_dmg(my_obstacle_18.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_19.x, my_obstacle_19.y, my_obstacle_19.obstacle_type);
+            if dmg > 0 { my_obstacle_19.health = safe_subtract_dmg(my_obstacle_19.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_20.x, my_obstacle_20.y, my_obstacle_20.obstacle_type);
+            if dmg > 0 { my_obstacle_20.health = safe_subtract_dmg(my_obstacle_20.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_21.x, my_obstacle_21.y, my_obstacle_21.obstacle_type);
+            if dmg > 0 { my_obstacle_21.health = safe_subtract_dmg(my_obstacle_21.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_22.x, my_obstacle_22.y, my_obstacle_22.obstacle_type);
+            if dmg > 0 { my_obstacle_22.health = safe_subtract_dmg(my_obstacle_22.health, dmg); }
+            let dmg = result_event.get_applied_damage(my_obstacle_23.x, my_obstacle_23.y, my_obstacle_23.obstacle_type);
+            if dmg > 0 { my_obstacle_23.health = safe_subtract_dmg(my_obstacle_23.health, dmg); }
         }
     }
-    let offset = (WIDTH as u64) * (HEIGHT as u64);
+
+    // write-back actor
+    if actor_id == 0 { my_char_0 = actor; }
+    if actor_id == 1 { my_char_1 = actor; }
+    if actor_id == 2 { my_char_2 = actor; }
+    if actor_id == 3 { my_char_3 = actor; }
+    if actor_id == 4 { my_char_4 = actor; }
+
+    // send death events
+
+    // validate result
+    let serialized_characters = serialize_chars([my_char_0, my_char_1, my_char_2, my_char_3, my_char_4]);
+    let serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialize_obstacles([my_obstacle_0, my_obstacle_1, my_obstacle_2, my_obstacle_3, my_obstacle_4, my_obstacle_5, my_obstacle_6, my_obstacle_7, my_obstacle_8, my_obstacle_9, my_obstacle_10, my_obstacle_11, my_obstacle_12, my_obstacle_13, my_obstacle_14, my_obstacle_15, my_obstacle_16, my_obstacle_17, my_obstacle_18, my_obstacle_19, my_obstacle_20, my_obstacle_21, my_obstacle_22, my_obstacle_23]);
+    // let serialized_obstacles: [[u8]; SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialized_obstacles.map(|o| Field.to_be_bytes(o, 32));
+    let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), serialized_characters.to_be_bytes(32), serialized_obstacles);
+    let new_hash = std::field::bytes32_to_field(new_hash_bytes);
+    assert(new_hash == gamestate_after_hash, f"{new_hash} != {gamestate_after_hash}");
+}
+
+fn get_data_hash(secret: [u8], characters: [u8], obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE]) -> [u8; 32] {
+    assert(secret.len() == 32);
+    assert(characters.len() == 32);
+
+    let mut data: [u8; 32 + 32 + SERIALIZED_OBSTACLES_ARRAY_SIZE * 32] = [0; 32 + 32 + SERIALIZED_OBSTACLES_ARRAY_SIZE * 32];
     for i in 0..32 {
-        data[offset + i] = secret[i];
-        data[offset + i + 32] = characters[i];
-        data[offset + i + 64] = traps[i];
-        data[offset + i + 96] = searched_traps[i];
-        data[offset + i + 128] = their_characters[i];
+        data[i] = secret[i];
+        data[i + 32] = characters[i];
+    }
+    let offset = 32 + 32;
+    for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
+        let obstacle = obstacles[i].to_be_bytes(32);
+        assert(obstacle.len() == 32);
+        for j in 0..32 {
+            data[offset + i * 32 + j] = obstacle[j];
+        }
     }
     // let offset = WIDTH * HEIGHT + 32 * 3;
     // for i in 0..10 {
@@ -266,375 +345,48 @@ fn get_data_hash(secret: [u8], characters: [u8], their_characters: [u8], traps: 
     std::hash::blake3(data)
 }
 
-
-fn main(
-    secret: Field,
-    my_characters: Field,
-    their_characters: Field,
-    actions: [Field; 5],
-    traps: Field,
-    searched_traps: Field, // [u32; HEIGHT],
-    move: pub u32,
-    map_old: [[u8; WIDTH]; HEIGHT],
-    map_new: [[u8; WIDTH]; HEIGHT],
-    received_events: pub [Field; MAX_EVENTS],
-    sending_events: pub [Field; MAX_EVENTS],
-    gamestate_before_hash: pub Field,
-    gamestate_after_hash: pub Field
-) {
-    let old_hash = get_data_hash(secret.to_be_bytes(32), my_characters.to_be_bytes(32), their_characters.to_be_bytes(32), traps.to_be_bytes(32), map_old, searched_traps.to_be_bytes(32));
-    // let old_gamestate_bytes = gamestate_before_hash.to_be_bytes(32);
-    let argh = std::field::bytes32_to_field(old_hash);
-    // assert(old_gamestate_bytes.len() == 32);
-    // for i in 0..32 {
-    //     assert(old_hash[i] == old_gamestate_bytes[i], f"{argh} != {gamestate_before_hash}");
-    // }
-    assert(argh == gamestate_before_hash, f"{argh} != {gamestate_before_hash}");
-
-    let actor_id = get_actor_from_move(move);
-    assert(actor_id < 5);
-
-    let mut game = Game::build(my_characters, their_characters, traps, searched_traps, map_old);
-
-    for i in 0..MAX_EVENTS {
-        let event = parse_event(received_events[i]);
-        assert(event.process(&mut game));
-    }
-
-    //let mut actor = &mut game.my_chars[actor_id];
-    // let class = actor.get_class();
-    // let id = actor.get_id();
-    // assert(1 == 2,f"{id} {class}");
-    // assert(actor_result.success);
-    // let mut actor = actor_result.value;
-    let mut game_events = game.events.map(|event| event);
-    let mut energy: u8 = 12;
-    for j in 0..5 {
-        let split = actions[j].to_be_bytes(32);
-        let action = split[1];
-        let move_to_result = move_to(game.map, game.my_chars[actor_id], &mut energy, split[3], split[4], action == MOVE);
-        let sneak_result = sneak_to(game.map, game.my_chars[actor_id], &mut energy, split[3], split[4], action == SNEAK);
-        let mut ec = *game.events_count;
-        let mut tc = *game.trap_count;
-        let new_trap = Trap { x: split[3], y: split[4], sprung: &mut 0, damage: 64 };
-        if action == SNEAK {
-            // hide: y|x|actor|0
-            assert(split[2] == actor_id); // for the most parts, only current actor may do stuff
-            assert(sneak_result);
-            // assert(game.add_event(sneak_result.value));
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == MOVE {
-            // movey|x|actor|0
-            assert(split[2] == actor_id);// for the most parts, only current actor may do stuff
-            //action_event_result = move_to(game.map, actor, &mut energy, split[3], split[4]);
-            assert(move_to_result.success);
-            // assert(game.add_event(move_to_result.value));
-        game_events[ec & EVENTS_BUFFER_MASK] = move_to_result.value;
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == RITUAL {
-            assert(split[2] == game.my_chars[actor_id].id); // for the most parts, only current actor may do stuff
-            assert(game.my_chars[actor_id].get_class() == RITUALIST);
-            assert(energy == 12);
-            energy = 0;
-            if game.my_chars[actor_id].get_status() < 7 {
-                *game.my_chars[actor_id].status += 1;
-        game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(RITUAL, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_std_event(RITUAL, actor.id, actor.get_x(), actor.get_y())));
-            } else {
-        game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(WIN, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_std_event(WIN, actor.id, actor.get_x(), actor.get_y())));
-            }
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == SEARCH {
-            assert(split[2] == game.my_chars[actor_id].id);
-            assert(game.my_chars[actor_id].get_class() == ROGUE);
-            let x = split[3];
-            let y = split[4];
-            assert(x < WIDTH);
-            assert(y < HEIGHT);
-            assert(energy >= 6);
-            let is_neighbor_result = Map::is_neighbor(game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), x, y);
-            assert(is_neighbor_result.success);
-            assert(is_neighbor_result.value);
-            // assert(((x == actor.x) & ((y == actor.y + 1) | (y == actor.y - 1))) | ((y == actor.x) & ((x == actor.x + 1) | (x == actor.x - 1))));
-            // assert(game.add_event(build_std_event(NO_EVENT, 0, 0, 0)));
-            energy -= 6;
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-        else if action == CAST_FIREBALL {
-            assert(split[2] == game.my_chars[actor_id].id);// for the most parts, only current actor may do stuff
-            assert(game.my_chars[actor_id].get_class() == MAGE, f"{actor_id}");
-            assert(energy == 12);
-            // TODO: Validate split = target!
-            energy = 0;
-            // assert(game.my_chars[actor_id].get_status() == 2);
-            if game.my_chars[actor_id].get_status() < 2 {
-                *game.my_chars[actor_id].status += 1;
-        game_events[ec & EVENTS_BUFFER_MASK] = build_std_event(SEE_CAST, game.my_chars[actor_id].id, game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y());
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_std_event(SEE_CAST, actor.id, actor.get_x(), actor.get_y())));
-            } else {
-        game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], 48, ATTACK_FIREBALL);
-        // assert(ec == 0);
-        // assert(game_events[0] ==0);
-            assert(game_events[0] != 0);
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, actor.get_x(), actor.get_y(), 48, ATTACK_FIREBALL)));
-            }
-        }
-        else if action == SET_TRAP {
-            assert(split[2] == game.my_chars[actor_id].id);
-            assert(game.my_chars[actor_id].set_status(0));
-            // assert(game.add_my_trap(new_trap)); // TODO: add more trap types ... for now all do 64 damage
-
-        assert(MAX_TRAPS <= TRAPS_BUFFER_SIZE);
-        // game.traps[tc & TRAPS_BUFFER_MASK] = new_trap;/////////TODO: no idea how to make compiler accept this
-        tc += 1;
-        *game.trap_count = tc;
-        
-        //let mut tile = TRAP;
-        // assert(tc < MAX_TRAPS & game.map.set(new_trap.x, new_trap.y, tile));
-            // if my_traps.len() >= 10 {
-            //     let (_popped, rest) = my_traps.pop_front();
-            //     my_traps = rest.push_back(Trap { x: split[3], y: split[4]});
-            // }
-        }
-        else if action == ATTACK {
-            assert(split[2] == game.my_chars[actor_id].id);
-            if game.my_chars[actor_id].get_class() == ARCHER {
-                assert(game.my_chars[actor_id].get_status() == 1);
-                // assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], actor.damage, ATTACK_RANGED)));
-        game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_RANGED);
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-            } else {
-                let is_neighbor_result = Map::is_neighbor(game.my_chars[actor_id].get_x(), game.my_chars[actor_id].get_y(), split[3], split[4]);
-                assert(is_neighbor_result.success);
-                assert(is_neighbor_result.value);
-                // assert_neighbor(actor, split[3], split[4]);
-                // assert(game.add_event(build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], actor.damage, ATTACK_MELEE)));
-        game_events[ec & EVENTS_BUFFER_MASK] = build_subtype_value_event(RECEIVE_ATTACK, actor_id, split[3], split[4], game.my_chars[actor_id].damage, ATTACK_MELEE);
-        assert(ec < MAX_EVENTS);
-        ec += 1;
-        *game.events_count = ec;
-                // let tile_result = game.get_tile(split[3], split[4]);
-                // assert(tile_result.success);
-                // if (actor.get_class() == KNIGHT) & (tile_result.value == WALL) {
-                //     assert(game.set_tile(split[3], split[4], EMPTY));
-                // }
-            }
-            assert(game.my_chars[actor_id].set_status(0));
-        }
-    //     else if action == DRAW {
-    //         assert(split[2] == actor.id);
-    //         assert(actor.get_class() == ARCHER);
-    //         assert(actor.set_status(1));
-    //         assert(game.add_event(build_std_event(SEE_DRAW, actor.id, split[3], split[4])));
-    //     }
-    //     // else if action == TRIGGER_TRAP {
-    //     //     let target = split[2];
-    //     //     assert(game.add_event(build_value_event(TRIGGERED_TRAP, target, split[3], split[4]));
-    //     //     i += 1;
-    //     // }
-    //     else if action == WAIT {
-    //         // assert(game.add_event(build_event(NO_EVENT, split[2], 255, 255));
-    //         assert(actor.set_status(0));
-    //     }
-    //     else {
-    //         assert(1 == 2); // basically, invalid action code
-    //     }
-    }
-
-    for i in 0..MAX_EVENTS {
-        let v0 = sending_events[i];
-        let v1 = game_events[i];
-        assert(sending_events[i] == game_events[i], f"{i}: {v0} != {v1}");
-    }
-
-    for i in 0..HEIGHT {
-        for j in 0..WIDTH {
-            let tile_result = game.map.get(j, i);
-            assert(tile_result.success);
-            assert(map_new[i][j] == tile_result.value);
+fn serialize_chars(chars: [Character; 5]) -> Field {
+    let mut result: [u8; 32] = [0; 32];
+    for i in 0..5 {
+        let serialized = chars[i].serialize();
+        for j in 0..6 {
+            result[2 + i * 6 + j] = serialized[j];
         }
     }
-    // if their_char[0].health + their_char[1].health + their_char[2].health + their_char[3].health + their_char[4].health == 0 {
-    //     // won0x04021604300200000000000000000000000000000000000000000000000000
-    // }         0x04020216300200000000000000000000000000000000000000000000000000
-    let map_after = [
-        game.map._data[0].map(|cell| *cell),
-        game.map._data[1].map(|cell| *cell),
-        game.map._data[2].map(|cell| *cell),
-        game.map._data[3].map(|cell| *cell),
-        game.map._data[4].map(|cell| *cell),
-        game.map._data[5].map(|cell| *cell),
-        game.map._data[6].map(|cell| *cell),
-        game.map._data[7].map(|cell| *cell),
-        game.map._data[8].map(|cell| *cell),
-        game.map._data[9].map(|cell| *cell),
-    ];
-    let my_chars_after = game.serialize_my_chars();
-    assert(my_chars_after.success);
-    let their_chars_after = game.serialize_their_chars();
-    assert(their_chars_after.success);
-    let traps_after = serialize_traps(game.get_trap_count() as u8, *game.traps);
-    let searched_traps_after = serialize_traps(game.get_their_trap_count() as u8, *game.searched_traps);
-
-    let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), my_chars_after.value.to_be_bytes(32), their_chars_after.value.to_be_bytes(32), traps_after.to_be_bytes(32), map_after, searched_traps_after.to_be_bytes(32));
-    let new_hash = std::field::bytes32_to_field(new_hash_bytes);
-    assert(new_hash == gamestate_after_hash, f"{new_hash} != {gamestate_after_hash}");
-    // let new_gamestate_bytes = gamestate_after_hash.to_be_bytes(32);
-    // assert(new_gamestate_bytes.len() == 32);
-    // for i in 0..32 {
-    //     assert(new_hash[i] == new_gamestate_bytes[i]);
-    // }
+    std::field::bytes32_to_field(result)
 }
 
-#[test]
-fn get_demo_game() {
-    let mut c0 = get_test_my_character(0, 2, 2, ARCHER);
-    let mut c1 = get_test_my_character(1, 2, 3, KNIGHT);
-    let mut c2 = get_test_my_character(2, 2, 4, MAGE);
-    let mut c3 = get_test_my_character(3, 2, 5, ROGUE);
-    let mut c4 = get_test_my_character(4, 2, 6, RITUALIST);
-
-    let mut e0 = get_test_their_character(0, 22, 2, UNKNOWN_CLASS);
-    let mut e1 = get_test_their_character(1, 22, 3, UNKNOWN_CLASS);
-    let mut e2 = get_test_their_character(2, 22, 4, UNKNOWN_CLASS);
-    let mut e3 = get_test_their_character(3, 22, 5, UNKNOWN_CLASS);
-    let mut e4 = get_test_their_character(4, 22, 6, UNKNOWN_CLASS);
-
-    *c2.status = 2;
-
-    // let my_traps = [0; 32];
-    // let their_traps = [0; 32];
-    let mut my_traps_result = parse_traps(0x0000ffff00000000000000000000000000000000000000000000000000000000);
-    let mut my_traps = my_traps_result.value;
-    let mut their_traps_result = parse_traps(0x0000ffff00000000000000000000000000000000000000000000000000000000);
-    let mut their_traps = their_traps_result.value;
-    //let mut map = get_test_map([c0, c1, c2, c3, c4], [e0, e1, e2, e3, e4], my_traps, their_traps);
-
-    let mut map = get_test_map(
-        [c0, c1, c2, c3, c4], //[get_test_my_character(0, 2, 2, ROGUE), get_test_my_character(1, 2, 3, KNIGHT), get_test_my_character(2, 2, 4, MAGE), get_test_my_character(3, 2, 5, RITUALIST), get_test_my_character(4, 2, 6, ARCHER)],
-        [e0, e1, e2, e3, e4], //[get_test_their_character(0, 22, 2, UNKNOWN_CLASS), get_test_their_character(1, 22, 3, UNKNOWN_CLASS), get_test_their_character(2, 22, 4, UNKNOWN_CLASS), get_test_their_character(3, 22, 5, UNKNOWN_CLASS), get_test_their_character(4, 22, 6, UNKNOWN_CLASS)],
-        [Trap { x: 255, y: 255, sprung: &mut 0, damage: 0 }; TRAPS_BUFFER_SIZE], /// TODO: using my_traps here causes exception on compile
-        [Trap { x: 255, y: 255, sprung: &mut 0, damage: 0 }; TRAPS_BUFFER_SIZE],
-    );
-
-    let game = Game {
-        my_chars: [&mut c0, &mut c1, &mut c2, &mut c3, &mut c4],
-        their_chars: [&mut e0, &mut e1, &mut e2, &mut e3, &mut e4],
-        traps: &mut my_traps,
-        searched_traps: &mut their_traps,
-        map: map,
-        events: &mut [0; MAX_EVENTS],
-        events_count: &mut 0,
-        won: &mut false,
-        lost: &mut false,
-        trap_count: &mut my_traps_result.count,
-        searched_trap_count: &mut their_traps_result.count,
-    };
-
-    let map_after = [
-        game.map._data[0].map(|cell| *cell),
-        game.map._data[1].map(|cell| *cell),
-        game.map._data[2].map(|cell| *cell),
-        game.map._data[3].map(|cell| *cell),
-        game.map._data[4].map(|cell| *cell),
-        game.map._data[5].map(|cell| *cell),
-        game.map._data[6].map(|cell| *cell),
-        game.map._data[7].map(|cell| *cell),
-        game.map._data[8].map(|cell| *cell),
-        game.map._data[9].map(|cell| *cell),
-    ];
-    assert(map_after.len() == 10);
-    for i in 0..10 {
-        assert(map_after[i].len() == 32);
+fn safe_subtract_dmg(a: u8, b: u16) -> u8 {
+    let mut result = 0;
+    if (a as u16) > b {
+        result = a - (b as u8);
     }
-    let my_chars_after = game.serialize_my_chars();
-    assert(my_chars_after.success);
-    let their_chars_after = game.serialize_their_chars();
-    assert(their_chars_after.success);
-    let traps_after = serialize_traps(game.get_trap_count() as u8, *game.traps);
-    let searched_traps_after = serialize_traps(game.get_their_trap_count() as u8, *game.searched_traps);
-
-    let my_chars = my_chars_after.value;
-    let their_chars = their_chars_after.value;
-
-    assert(map_after[2][22] == UNKNOWN_CLASS_TILE);
-
-    let secret: Field = 1234567890;
-    let new_hash_array = get_data_hash(secret.to_be_bytes(32), my_chars_after.value.to_be_bytes(32), their_chars.to_be_bytes(32), traps_after.to_be_bytes(32), [
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, ARCHER, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [WALL, WALL, KNIGHT,WALL, WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [WALL, EMPTY,MAGE,  EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, EMPTY,ROGUE,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, WALL, RITUALIST,WALL, WALL, 0, 0, EMPTY,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, EMPTY,0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
-    ], searched_traps_after.to_be_bytes(32));
-    let new_hash = std::field::bytes32_to_field(new_hash_array);
-
-    assert(new_hash == 0x0716ac88cc4d1abab6ed2c00278573908bc1b360c955eab19e5822c1d107cdcc, f"hash: {new_hash}, secret: {secret}, my_chars: {my_chars}, their_chars: {their_chars}, traps: {traps_after}, searched_traps: {searched_traps_after}");
+    result
 }
 
 #[test]
 fn test_main() {
+    let chars = [
+        Character { id: 0, x: 2, y: 2, class: ARCHER, health: 100, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 100 },
+        Character { id: 1, x: 2, y: 3, class: RITUALIST, health: 60, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 20 },
+        Character { id: 2, x: 2, y: 4, class: ROGUE, health: 80, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 40 },
+        Character { id: 3, x: 2, y: 5, class: KNIGHT, health: 120, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 60 },
+        Character { id: 4, x: 2, y: 6, class: MAGE, health: 40, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 80 },
+    ];
+    let chars_serialized = character::serialize_chars(chars);
+    let obs: [Obstacle; MAX_OBSTACLES] = obstacle::get_default_obstacles();
+    let obs_serialized: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialize_obstacles(obs);
     main(
-        1234567890,
-        0x2202643f0f008203643f0f00a224643f0f006205643f0f004206643f0f00,
-        0x1602ff3f0f001603ff3f0f001604ff3f0f001605ff3f0f001606ff3f0f00,
-        [ std::field::bytes32_to_field([0, CAST_FIREBALL, 2, 22, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 0, 0, 0, 0],
-        0x7fff00000000000000000000000000000000000000000000000000000000,
-        0x7fff00000000000000000000000000000000000000000000000000000000,
-        4,
-        [
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, ARCHER, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,               UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [WALL, WALL, KNIGHT,WALL, WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [WALL, EMPTY,MAGE,  EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, EMPTY,ROGUE,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, WALL, RITUALIST,WALL, WALL, 0, 0, EMPTY,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, EMPTY,0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
-    ],
-        [
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, ARCHER, 0, 0, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, 0, 0, 0, 0, 0],
-        [WALL, WALL, KNIGHT,WALL, WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [WALL, EMPTY,MAGE,  EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, EMPTY,ROGUE,EMPTY,WALL, 0, 0, WALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     UNKNOWN_CLASS_TILE, 0, WALL, 0, 0, WALL, EMPTY,EMPTY,EMPTY,WALL],
-        [WALL, WALL, RITUALIST,WALL, WALL, 0, 0, EMPTY,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, UNKNOWN_CLASS_TILE, 0, EMPTY,0, 0, WALL, WALL, EMPTY,WALL, WALL],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, WATER, WATER, WATER, 0, 0, 0, 0, 0],
-    ],
-        [0; MAX_EVENTS],
-        [build_subtype_value_event(RECEIVE_ATTACK, 2, 22, 4, 48, ATTACK_FIREBALL), 0, 0, 0, 0, 0, 0, 0],
-        0x0716ac88cc4d1abab6ed2c00278573908bc1b360c955eab19e5822c1d107cdcc,
-        0x0a824dd1c049066a192d49045e50814708070119ff93e13bb3805b1074ccaff6
-    )
+        123456789,
+        chars_serialized,
+        obs_serialized,
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        0,
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        0);
+
+    // Uncomment to make test fail
+    // main(1, 1);
 }
