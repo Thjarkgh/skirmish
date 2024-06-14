@@ -2,13 +2,11 @@ mod action;
 use action::Action;
 mod character;
 use character::Character;
+use character::parse_characters;
 mod event;
 use event::Event;
-mod roster;
-use roster::Roster;
 mod obstacle;
 use obstacle::Obstacle;
-use obstacle::{ parse_obstacles, serialize_obstacles };
 mod map;
 use dep::std;
 

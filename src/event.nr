@@ -1,33 +1,16 @@
-use crate::character::Character;
-use crate::EVENT_COUNT;
-use crate::NO_EVENT;
-use crate::SEE_MOVE;
-use crate::SEE_RITUAL;
-use crate::SEE_CAST;
-use crate::SEE_DRAW;
-use crate::SEE_SEARCH_TRAP;
-use crate::RECEIVE_ATTACK;
-use crate::TRIGGERED_TRAP;
-use crate::WIN;
-use crate::FOUND_TRAP;
-use crate::DISCOVER;
-use crate::RECEIVE_DAMAGE;
-use crate::DESTROY;
-// use crate::DEATH;
-use crate::MAX_TRAPS;
-use crate::WALL;
-use crate::EMPTY;
-use crate::TRAPS_BUFFER_MASK;
-use crate::CLASS_COUNT;
-use crate::ATTACK_COUNT;
-use crate::action::is_neighbor;
-use dep::std;
-use crate::character::{ get_attack_damage_to_tile, get_trap_damage_to_tile };
+use crate::{ NO_EVENT, SEE_MOVE, SEE_RITUAL, SEE_CAST, SEE_DRAW, SEE_SEARCH_TRAP, RECEIVE_ATTACK, TRIGGERED_TRAP, FOUND_TRAP };
+use crate::{ EMPTY, WALL };
+use crate::{ ATTACK_COUNT, CLASS_COUNT, EVENT_COUNT };
 use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
-// trait Event {
-//     fn to_field(self) -> Field;
-//     fn process<T, U>(self, game: &mut T) where U: Character, T: Game<U>;
-// }
+use crate::{ SERIALIZED_EVENT_BYTE_SIZE, SERIALIZED_EVENTS_ARRAY_SIZE, SERIALIZED_EVENTS_PER_FIELD };
+use crate::{ WIDTH, HEIGHT, NOWHERE };
+use crate::{ MAX_CHARACTERS, MAX_EVENTS, MAX_TRAPS };
+use crate::TRAPS_BUFFER_MASK;
+use crate::UNREADABLE_BYTES_PER_FIELD;
+use crate::action::is_neighbor;
+use crate::character::Character;
+use crate::character::{ get_attack_damage_to_tile, get_trap_damage_to_tile };
+use dep::std;
 
 struct Event {
     event: u8,

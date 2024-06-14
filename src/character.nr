@@ -6,11 +6,11 @@ use crate::RITUALIST;
 use crate::ROGUE;
 use crate::WIDTH;
 use crate::HEIGHT;
-use crate::CLASS_COUNT;
-use crate::STATUS_COUNT;
-use crate::MAX_EVENTS;
+use crate::{ CLASS_COUNT, STATUS_COUNT };
+use crate::{ MAX_CHARACTERS, MAX_EVENTS, MAX_OBSTACLES };
 use crate::event::Event;
 use crate::{ WALL, WATER };
+use crate::obstacle::Obstacle;
 
 // this should be more efficient: for all the following: order is: UNKNOWN_CLASS, ARCHER, RITUALIST, ROGUE, KNIGHT, MAGE
 global class_damage = [ 0, 32, 8, 24, 40, 16 ];

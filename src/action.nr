@@ -1,12 +1,18 @@
-use crate::WIDTH;
-use crate::HEIGHT;
-use crate::character::Character;
-use crate::{ SNEAK, MOVE, RITUAL, SEARCH, ATTACK, CAST_FIREBALL, DRAW, DISARM_TRAP };
-use crate::event::{ build_std_event, build_subtype_value_event, build_value_event };
-use crate::{ WAIT, SEE_MOVE, WIN, SEE_RITUAL, SEE_SEARCH_TRAP, RECEIVE_ATTACK, ATTACK_MELEE, SEE_CAST, SEE_DRAW, DESTROY, ATTACK_FIREBALL };
+use crate::{ HEIGHT, WIDTH };
+use crate::{ SNEAK, MOVE, RITUAL, SEARCH, ATTACK, CAST_FIREBALL, DRAW, DISARM_TRAP, SHOOT };
+use crate::{ NO_EVENT, WAIT, SEE_MOVE, WIN, SEE_RITUAL, SEE_SEARCH_TRAP, RECEIVE_ATTACK, ATTACK_MELEE, SEE_CAST, SEE_DRAW, DESTROY, ATTACK_FIREBALL, ATTACK_RANGED };
 use crate::{ FIREBALL_ROUNDS_FOR_CAST, RITUAL_ROUNDS_FOR_WIN };
-use crate::map::is_neighbor;
+use crate::{ MIN_DRAW_ROUNDS_FOR_SHOOT, MAX_DRAW_ROUNDS_FOR_SHOOT };
+use crate::{ MAX_ACTIONS, MAX_OBSTACLES };
+use crate::{ SERIALIZED_ACTION_BYTE_SIZE, SERIALIZED_ACTIONS_ARRAY_SIZE, SERIALIZED_ACTIONS_PER_FIELD };
+use crate::UNREADABLE_BYTES_PER_FIELD;
+use crate::NON_EMPTY_WALKABLE_TILE_MIN;
+use crate::character::Character;
 use crate::event::Event;
+use crate::event::{ build_std_event, build_subtype_value_event, build_value_event };
+use crate::map::is_neighbor;
+use crate::obstacle::Obstacle;
+use dep::std;
 
 struct Action {
     action: u8,
