@@ -118,215 +118,144 @@ fn get_actor_from_move(mut move: u32) -> u8 {
 }
 
 fn main(
-    // my_char_0: Character,
-    // my_char_1: Character,
-    // my_char_2: Character,
-    // my_char_3: Character,
-    // my_char_4: Character,
-    // their_char_0: Character,
-    // their_char_1: Character,
-    // their_char_2: Character,
-    // their_char_3: Character,
-    // their_char_4: Character,
-    // my_chars: Roster,
-    // their_chars: Roster,
-    // action_0: Action,
-    // action_1: Action,
-    // action_2: Action,
-    // action_3: Action,
-    // action_4: Action,
+    // My Secret State
     secret: Field,
     my_chars: Field,
     my_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE],
-    enemy_objects: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + MAX_CHARACTERS],
-    actions: [Field; MAX_ACTIONS],
+    actions: [Field; SERIALIZED_ACTIONS_ARRAY_SIZE],
+    // Common Inputs
     move: pub u32,
-    events: pub [Field; MAX_EVENTS],
-    result_events: pub [Field; MAX_EVENTS],
+    // Enemy Inputs
+    enemy_advance: pub u8,
+    enemy_objects: pub [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1],
+    events: pub [Field; SERIALIZED_EVENTS_ARRAY_SIZE], //MAX_EVENTS],
+    // My Results
+    my_advance: pub u8, // 1 bit win, 1 bit lose, 1 bit reserved, 5 bits advance
+    my_result_events: pub [Field; SERIALIZED_EVENTS_ARRAY_SIZE],
+    my_result_objects: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1],
+    // Gamestate Hashes
+    gamestate_before_hash: pub Field,
     gamestate_after_hash: pub Field,
-    // event_0: pub Event,
-    // event_1: pub Event,
-    // event_2: pub Event,
-    // event_3: pub Event,
-    // event_4: pub Event,
-    // event_5: pub Event,
-    // event_6: pub Event,
-    // event_7: pub Event,
 ) {
-    let events: [Event; MAX_EVENTS] = events.map(|event| Event::from_field(event));
-    let mut my_char_0 = Character::parse(0, my_chars, events);
-    let mut my_char_1 = Character::parse(1, my_chars, events);
-    let mut my_char_2 = Character::parse(2, my_chars, events);
-    let mut my_char_3 = Character::parse(3, my_chars, events);
-    let mut my_char_4 = Character::parse(4, my_chars, events);
+    // Validate global constants (to make sure one didn't change one without updating dependet ones)
+    assert(SERIALIZED_EVENTS_PER_FIELD * SERIALIZED_EVENTS_ARRAY_SIZE == MAX_EVENTS);
+    assert(SERIALIZED_OBSTACLES_PER_FIELD * SERIALIZED_OBSTACLES_ARRAY_SIZE == MAX_OBSTACLES);
+
+    let gamestate_before_hash_calculated = get_data_hash(secret.to_be_bytes(32), my_chars.to_be_bytes(32), my_obstacles);
+    let gamestate_before_hash_calculated_field = std::field::bytes32_to_field(gamestate_before_hash_calculated);
+    assert(gamestate_before_hash == gamestate_before_hash_calculated_field, f"{gamestate_before_hash} != {gamestate_before_hash_calculated_field}");
+
+    // TODO: Validate map => check that initial setup is ok => unique ids and no coordination overlaps!
+
+    let events: [Event; MAX_EVENTS] = Event::parse_events(events);
+    
+    let side = move as u1;
+    let mut my_chars = parse_characters(my_chars, events, enemy_advance, side);
 
     let actor_id = get_actor_from_move(move);
-    let mut actor = Character::parse(actor_id, my_chars, events);
+    let mut actor = my_chars[actor_id]; //Character::parse(actor_id, my_chars, events);
     
-    let actions = actions.map(|action| Action::from_field(action));
+    let actions = Action::parse_actions(actions); // actions.map(|action| Action::from_field(action));
     
     assert(MAX_OBSTACLES == 24);
-    let my_obstacles_parsed = parse_obstacles(my_obstacles, events);
-    let mut my_obstacle_0 = my_obstacles_parsed[0];
-    let mut my_obstacle_1 = my_obstacles_parsed[1];
-    let mut my_obstacle_2 = my_obstacles_parsed[2];
-    let mut my_obstacle_3 = my_obstacles_parsed[3];
-    let mut my_obstacle_4 = my_obstacles_parsed[4];
-    let mut my_obstacle_5 = my_obstacles_parsed[5];
-    let mut my_obstacle_6 = my_obstacles_parsed[6];
-    let mut my_obstacle_7 = my_obstacles_parsed[7];
-    let mut my_obstacle_8 = my_obstacles_parsed[8];
-    let mut my_obstacle_9 = my_obstacles_parsed[9];
-    let mut my_obstacle_10 = my_obstacles_parsed[10];
-    let mut my_obstacle_11 = my_obstacles_parsed[11];
-    let mut my_obstacle_12 = my_obstacles_parsed[12];
-    let mut my_obstacle_13 = my_obstacles_parsed[13];
-    let mut my_obstacle_14 = my_obstacles_parsed[14];
-    let mut my_obstacle_15 = my_obstacles_parsed[15];
-    let mut my_obstacle_16 = my_obstacles_parsed[16];
-    let mut my_obstacle_17 = my_obstacles_parsed[17];
-    let mut my_obstacle_18 = my_obstacles_parsed[18];
-    let mut my_obstacle_19 = my_obstacles_parsed[19];
-    let mut my_obstacle_20 = my_obstacles_parsed[20];
-    let mut my_obstacle_21 = my_obstacles_parsed[21];
-    let mut my_obstacle_22 = my_obstacles_parsed[22];
-    let mut my_obstacle_23 = my_obstacles_parsed[23];
+    let mut my_obstacles_parsed = Obstacle::parse_my_obstacles(my_obstacles, events).as_array();
+    // TODO: validate obstacles => check that initial setup is ok => unique ids and no coordination overlaps!
 
-    // let mut my_obstacle_0 = Obstacle::parse(0, my_obstacles[0], events);
-    // let mut my_obstacle_1 = Obstacle::parse(1, my_obstacles[1], events);
-    // let mut my_obstacle_2 = Obstacle::parse(2, my_obstacles[2], events);
-    // let mut my_obstacle_3 = Obstacle::parse(3, my_obstacles[3], events);
-    // let mut my_obstacle_4 = Obstacle::parse(4, my_obstacles[4], events);
-    // let mut my_obstacle_5 = Obstacle::parse(5, my_obstacles[5], events);
-    // let mut my_obstacle_6 = Obstacle::parse(6, my_obstacles[6], events);
-    // let mut my_obstacle_7 = Obstacle::parse(7, my_obstacles[7], events);
-    // let mut my_obstacle_8 = Obstacle::parse(8, my_obstacles[8], events);
-    // let mut my_obstacle_9 = Obstacle::parse(9, my_obstacles[9], events);
-    // let mut my_obstacle_10 = Obstacle::parse(10, my_obstacles[10], events);
-    // let mut my_obstacle_11 = Obstacle::parse(11, my_obstacles[11], events);
-    // let mut my_obstacle_12 = Obstacle::parse(12, my_obstacles[12], events);
-    // let mut my_obstacle_13 = Obstacle::parse(13, my_obstacles[13], events);
-    // let mut my_obstacle_14 = Obstacle::parse(14, my_obstacles[14], events);
-    // let mut my_obstacle_15 = Obstacle::parse(15, my_obstacles[15], events);
-    // let mut my_obstacle_16 = Obstacle::parse(16, my_obstacles[16], events);
-    // let mut my_obstacle_17 = Obstacle::parse(17, my_obstacles[17], events);
-    // let mut my_obstacle_18 = Obstacle::parse(18, my_obstacles[18], events);
-    // let mut my_obstacle_19 = Obstacle::parse(19, my_obstacles[19], events);
-    // let mut my_obstacle_20 = Obstacle::parse(20, my_obstacles[20], events);
-    // let mut my_obstacle_21 = Obstacle::parse(21, my_obstacles[21], events);
-    // let mut my_obstacle_22 = Obstacle::parse(22, my_obstacles[22], events);
-    // let mut my_obstacle_23 = Obstacle::parse(23, my_obstacles[23], events);
+    // Note: no need to validate enemy obstacles => opponent proof verifies that they are correct already!
+    let enemy_objects_parsed = Obstacle::parse_their_obstacles(enemy_objects);
 
     let mut energy: u8 = 12;
+    let mut result_events_calculated: [Event] = &[];
     for i in 0..MAX_ACTIONS {
+        // TODO: ensure that if actor committed suicide, it is not allowed to do any more actions
         let action = actions[i];
-        let result = action.execute(actor, energy);
+        let result = action.execute(actor, energy, my_obstacles_parsed, enemy_objects_parsed);
         let result_event = result.0;
         actor = result.1;
         energy = result.2;
         
-        if result_event.may_affect_my_other_characters() {
-            // no mutable arrays, so have to do copy-paste
-            let dmg = result_event.get_applied_damage(my_char_0.x, my_char_0.y, my_char_0.class);
-            if dmg > (my_char_0.health as u16) {
-                my_char_0.health = 0;
-            } else if dmg > 0 {
-                my_char_0.health -= (dmg as u8);
-            }
-            let dmg = result_event.get_applied_damage(my_char_1.x, my_char_1.y, my_char_1.class);
-            if dmg > (my_char_1.health as u16) {
-                my_char_1.health = 0;
-            } else if dmg > 0 {
-                my_char_1.health -= (dmg as u8);
-            }
-            let dmg = result_event.get_applied_damage(my_char_2.x, my_char_2.y, my_char_2.class);
-            if dmg > (my_char_2.health as u16) {
-                my_char_2.health = 0;
-            } else if dmg > 0 {
-                my_char_2.health -= (dmg as u8);
-            }
-            let dmg = result_event.get_applied_damage(my_char_3.x, my_char_3.y, my_char_3.class);
-            if dmg > (my_char_3.health as u16) {
-                my_char_3.health = 0;
-            } else if dmg > 0 {
-                my_char_3.health -= (dmg as u8);
-            }
-            let dmg = result_event.get_applied_damage(my_char_4.x, my_char_4.y, my_char_4.class);
-            if dmg > (my_char_4.health as u16) {
-                my_char_4.health = 0;
-            } else if dmg > 0 {
-                my_char_4.health -= (dmg as u8);
-            }
-        }
+        my_chars = my_chars.map(|c| wb_apply_damage_to_char(c, result_event, actor));
+        my_obstacles_parsed = my_obstacles_parsed.map(|obstacle| update_my_obstacle(obstacle, result_event));
 
-        if result_event.may_affect_my_obstacles() {
-            let dmg = result_event.get_applied_damage(my_obstacle_0.x, my_obstacle_0.y, my_obstacle_0.obstacle_type);
-            if dmg > 0 { my_obstacle_0.health = safe_subtract_dmg(my_obstacle_0.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_1.x, my_obstacle_1.y, my_obstacle_1.obstacle_type);
-            if dmg > 0 { my_obstacle_1.health = safe_subtract_dmg(my_obstacle_1.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_2.x, my_obstacle_2.y, my_obstacle_2.obstacle_type);
-            if dmg > 0 { my_obstacle_2.health = safe_subtract_dmg(my_obstacle_2.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_3.x, my_obstacle_3.y, my_obstacle_3.obstacle_type);
-            if dmg > 0 { my_obstacle_3.health = safe_subtract_dmg(my_obstacle_3.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_4.x, my_obstacle_4.y, my_obstacle_4.obstacle_type);
-            if dmg > 0 { my_obstacle_4.health = safe_subtract_dmg(my_obstacle_4.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_5.x, my_obstacle_5.y, my_obstacle_5.obstacle_type);
-            if dmg > 0 { my_obstacle_5.health = safe_subtract_dmg(my_obstacle_5.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_6.x, my_obstacle_6.y, my_obstacle_6.obstacle_type);
-            if dmg > 0 { my_obstacle_6.health = safe_subtract_dmg(my_obstacle_6.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_7.x, my_obstacle_7.y, my_obstacle_7.obstacle_type);
-            if dmg > 0 { my_obstacle_7.health = safe_subtract_dmg(my_obstacle_7.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_8.x, my_obstacle_8.y, my_obstacle_8.obstacle_type);
-            if dmg > 0 { my_obstacle_8.health = safe_subtract_dmg(my_obstacle_8.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_9.x, my_obstacle_9.y, my_obstacle_9.obstacle_type);
-            if dmg > 0 { my_obstacle_9.health = safe_subtract_dmg(my_obstacle_9.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_10.x, my_obstacle_10.y, my_obstacle_10.obstacle_type);
-            if dmg > 0 { my_obstacle_10.health = safe_subtract_dmg(my_obstacle_10.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_11.x, my_obstacle_11.y, my_obstacle_11.obstacle_type);
-            if dmg > 0 { my_obstacle_11.health = safe_subtract_dmg(my_obstacle_11.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_12.x, my_obstacle_12.y, my_obstacle_12.obstacle_type);
-            if dmg > 0 { my_obstacle_12.health = safe_subtract_dmg(my_obstacle_12.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_13.x, my_obstacle_13.y, my_obstacle_13.obstacle_type);
-            if dmg > 0 { my_obstacle_13.health = safe_subtract_dmg(my_obstacle_13.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_14.x, my_obstacle_14.y, my_obstacle_14.obstacle_type);
-            if dmg > 0 { my_obstacle_14.health = safe_subtract_dmg(my_obstacle_14.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_15.x, my_obstacle_15.y, my_obstacle_15.obstacle_type);
-            if dmg > 0 { my_obstacle_15.health = safe_subtract_dmg(my_obstacle_15.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_16.x, my_obstacle_16.y, my_obstacle_16.obstacle_type);
-            if dmg > 0 { my_obstacle_16.health = safe_subtract_dmg(my_obstacle_16.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_17.x, my_obstacle_17.y, my_obstacle_17.obstacle_type);
-            if dmg > 0 { my_obstacle_17.health = safe_subtract_dmg(my_obstacle_17.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_18.x, my_obstacle_18.y, my_obstacle_18.obstacle_type);
-            if dmg > 0 { my_obstacle_18.health = safe_subtract_dmg(my_obstacle_18.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_19.x, my_obstacle_19.y, my_obstacle_19.obstacle_type);
-            if dmg > 0 { my_obstacle_19.health = safe_subtract_dmg(my_obstacle_19.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_20.x, my_obstacle_20.y, my_obstacle_20.obstacle_type);
-            if dmg > 0 { my_obstacle_20.health = safe_subtract_dmg(my_obstacle_20.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_21.x, my_obstacle_21.y, my_obstacle_21.obstacle_type);
-            if dmg > 0 { my_obstacle_21.health = safe_subtract_dmg(my_obstacle_21.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_22.x, my_obstacle_22.y, my_obstacle_22.obstacle_type);
-            if dmg > 0 { my_obstacle_22.health = safe_subtract_dmg(my_obstacle_22.health, dmg); }
-            let dmg = result_event.get_applied_damage(my_obstacle_23.x, my_obstacle_23.y, my_obstacle_23.obstacle_type);
-            if dmg > 0 { my_obstacle_23.health = safe_subtract_dmg(my_obstacle_23.health, dmg); }
-        }
+        result_events_calculated = result_events_calculated.push_back(result_event);
+    }
+    let result_events_calculated = Event::serialize_events(result_events_calculated);
+    assert(result_events_calculated.len() == SERIALIZED_EVENTS_ARRAY_SIZE);
+    for i in 0..SERIALIZED_EVENTS_ARRAY_SIZE {
+        let result_event_calculated = result_events_calculated[i];
+        let result_event_should = my_result_events[i];
+        assert(result_event_should == result_event_calculated, f"Invalid result event {i}: {result_event_should} != {result_event_calculated}");
     }
 
-    // write-back actor
-    if actor_id == 0 { my_char_0 = actor; }
-    if actor_id == 1 { my_char_1 = actor; }
-    if actor_id == 2 { my_char_2 = actor; }
-    if actor_id == 3 { my_char_3 = actor; }
-    if actor_id == 4 { my_char_4 = actor; }
+    // send death events => no need
 
-    // send death events
+    // determine view range
+    let mut my_advance_calculated = 0;
+    if side == 0 {
+        for i in 0..MAX_CHARACTERS {
+            if my_chars[i].x > my_advance_calculated {
+                my_advance_calculated = my_chars[i].x;
+            }
+        }
+        my_advance_calculated += VIEW_DISTANCE;
+    } else {
+        my_advance_calculated = WIDTH - 1;
+        for i in 0..MAX_CHARACTERS {
+            if my_chars[i].x < my_advance_calculated {
+                my_advance_calculated = my_chars[i].x;
+            }
+        }
+        my_advance_calculated -= VIEW_DISTANCE;
+    }
+    assert(my_advance == my_advance_calculated, f"{my_advance} != {my_advance_calculated}");
 
     // validate result
-    let serialized_characters = serialize_chars([my_char_0, my_char_1, my_char_2, my_char_3, my_char_4]);
-    let serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialize_obstacles([my_obstacle_0, my_obstacle_1, my_obstacle_2, my_obstacle_3, my_obstacle_4, my_obstacle_5, my_obstacle_6, my_obstacle_7, my_obstacle_8, my_obstacle_9, my_obstacle_10, my_obstacle_11, my_obstacle_12, my_obstacle_13, my_obstacle_14, my_obstacle_15, my_obstacle_16, my_obstacle_17, my_obstacle_18, my_obstacle_19, my_obstacle_20, my_obstacle_21, my_obstacle_22, my_obstacle_23]);
-    // let serialized_obstacles: [[u8]; SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialized_obstacles.map(|o| Field.to_be_bytes(o, 32));
-    let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), serialized_characters.to_be_bytes(32), serialized_obstacles);
+    let serialized_characters = serialize_chars(my_chars);
+    let serialized_obstacles: [Field] = Obstacle::serialize_obstacles(my_obstacles_parsed);
+    assert(serialized_obstacles.len() == SERIALIZED_OBSTACLES_ARRAY_SIZE);
+    let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), serialized_characters.to_be_bytes(32), serialized_obstacles.as_array());
     let new_hash = std::field::bytes32_to_field(new_hash_bytes);
+    let serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1] = serialized_obstacles.push_back(serialize_chars_as_obstacles(my_chars)).as_array();
+    for i in 0..my_result_objects.len() {
+        let my_result_object = my_result_objects[i];
+        let serialized_obstacle = serialized_obstacles[i];
+        assert(my_result_object == serialized_obstacle, f"{i}: {my_result_object} != {serialized_obstacle}");
+    }
     assert(new_hash == gamestate_after_hash, f"{new_hash} != {gamestate_after_hash}");
+}
+
+fn wb_apply_damage_to_char(mut c: Character, event: Event, actor: Character) -> Character {
+    if c.id == actor.id {
+        c = actor;
+    }
+    apply_damage_to_char(c, event)
+}
+
+fn apply_damage_to_char(c: Character, event: Event) -> Character {
+    let dmg = event.get_applied_damage_to_my_asset(c.x, c.y, c.class);
+    Character {
+        id: c.id,
+        x: c.x,
+        y: c.y,
+        class: c.class,
+        health: safe_subtract_dmg(c.health, dmg),
+        status: c.status,
+        target_x: c.target_x,
+        target_y: c.target_y,
+        has_been_seen: c.has_been_seen,
+        is_hidden: c.is_hidden,
+        damage_mod: c.damage_mod,
+    }
+}
+fn update_my_obstacle(obstacle: Obstacle, event: Event) -> Obstacle {
+    let dmg = event.get_applied_damage_to_my_asset(obstacle.x, obstacle.y, obstacle.obstacle_type);
+    Obstacle {
+        health: safe_subtract_dmg(obstacle.health, dmg),
+        id: obstacle.id,
+        x: obstacle.x,
+        y: obstacle.y,
+        obstacle_type: obstacle.obstacle_type,
+    }
 }
 
 fn get_data_hash(secret: [u8], characters: [u8], obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE]) -> [u8; 32] {
@@ -356,13 +285,26 @@ fn get_data_hash(secret: [u8], characters: [u8], obstacles: [Field; SERIALIZED_O
     std::hash::blake3(data)
 }
 
-fn serialize_chars(chars: [Character; 5]) -> Field {
+fn serialize_chars(chars: [Character; MAX_CHARACTERS]) -> Field {
+    assert(MAX_CHARACTERS <= 5);
     let mut result: [u8; 32] = [0; 32];
-    for i in 0..5 {
+    for i in 0..MAX_CHARACTERS {
         let serialized = chars[i].serialize();
         for j in 0..6 {
             result[2 + i * 6 + j] = serialized[j];
         }
+    }
+    std::field::bytes32_to_field(result)
+}
+
+fn serialize_chars_as_obstacles(chars: [Character; MAX_CHARACTERS]) -> Field {
+    let mut result: [u8; 32] = [0; 32];
+    for i in 0..MAX_CHARACTERS {
+        let char_as_obstacle = chars[i].to_obstacle();
+        let serialized = char_as_obstacle.serialize();
+        result[2 + i * 3] = serialized[0];
+        result[2 + i * 3 + 1] = serialized[1];
+        result[2 + i * 3 + 2] = serialized[2];
     }
     std::field::bytes32_to_field(result)
 }
@@ -375,29 +317,38 @@ fn safe_subtract_dmg(a: u8, b: u16) -> u8 {
     result
 }
 
+fn test_result_object_builder(chars: [Character; MAX_CHARACTERS], obs: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE]) -> [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1] {
+    let mut result: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1] = [0; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1];
+    for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
+        result[i] = obs[i];
+    }
+    result[SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialize_chars_as_obstacles(chars);
+    result
+}
+
 #[test]
 fn test_main() {
-    let chars = [
-        Character { id: 0, x: 2, y: 2, class: ARCHER, health: 100, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 100 },
-        Character { id: 1, x: 2, y: 3, class: RITUALIST, health: 60, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 20 },
-        Character { id: 2, x: 2, y: 4, class: ROGUE, health: 80, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 40 },
-        Character { id: 3, x: 2, y: 5, class: KNIGHT, health: 120, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 60 },
-        Character { id: 4, x: 2, y: 6, class: MAGE, health: 40, status: 0, target_x: 255, target_y: 255, has_been_seen: 0, damage: 80 },
+    let mut chars = [ character::get_default_characters(0), character::get_default_characters(1) ];
+    let mut obs = [ Obstacle::get_default_obstacles(0), Obstacle::get_default_obstacles(1) ];
+    let actions = &[
+        Action { action: MOVE, actor: 0, target_x: 2, target_y: 1 },
+        Action { action: MOVE, actor: 0, target_x: 3, target_y: 1 },
+        Action { action: MOVE, actor: 0, target_x: 4, target_y: 1 },
+        Action { action: MOVE, actor: 0, target_x: 5, target_y: 1 },
     ];
-    let chars_serialized = character::serialize_chars(chars);
-    let obs: [Obstacle; MAX_OBSTACLES] = obstacle::get_default_obstacles();
-    let obs_serialized: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = serialize_obstacles(obs);
+    let mut move = 0;
     main(
         123456789,
-        chars_serialized,
-        obs_serialized,
-        [0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0],
-        0,
-        [0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0],
-        0);
-
-    // Uncomment to make test fail
-    // main(1, 1);
+        character::serialize_chars(chars[0]),
+        Obstacle::serialize_obstacles(obs[0]),
+        Action::serialize_actions(actions),
+        move,
+        2 + VIEW_DISTANCE,
+        [0, 0, 0, 0], // enemy objects
+        [0], // events
+        11, // result advance
+        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // my result events (should)
+        test_result_object_builder([ chars[0][0].move(5, 1), chars[0][1], chars[0][2], chars[0][3], chars[0][4] ], Obstacle::serialize_obstacles(obs[0])), // my visible objects
+        0x266a56eeca3c428d06ac08bc2741290db9d5b0714cdc96cd7330781e2f06c2b3,
+        0x0d66c10ceaf16643f43c3273d57568a18ba7c74494703772fa79e4ed46144f6a);
 }

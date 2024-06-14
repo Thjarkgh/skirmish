@@ -1,15 +1,13 @@
 use crate::MAX_OBSTACLES;
-use crate::HEIGHT;
-use crate::WIDTH;
-use crate::WALL;
-use crate::WATER;
-use crate::MAX_CHARACTERS;
-use crate::MAX_EVENTS;
-use crate::event::Event;
+use crate::{ HEIGHT, WIDTH };
+use crate::{ WALL, WATER };
+use crate::{ MAX_CHARACTERS, MAX_EVENTS };
 use crate::{ RECEIVE_ATTACK };
 use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
+use crate::{ SERIALIZED_OBSTACLE_BYTE_SIZE, SERIALIZED_OBSTACLES_PER_FIELD, SERIALIZED_OBSTACLES_ARRAY_SIZE };
+use crate::NON_EMPTY_WALKABLE_TILE_MIN;
+use crate::event::Event;
 use crate::map::is_neighbor;
-use crate::{ SERIALIZED_OBSTACLES_PER_FIELD, SERIALIZED_OBSTACLES_ARRAY_SIZE };
 use dep::std;
 
 struct Obstacle {
@@ -18,32 +16,51 @@ struct Obstacle {
     y: u8,             // 4 bit
     health: u8,        // 8 bit
     obstacle_type: u8, // 4 bit
-    was_alive: bool,
 }
 
 impl Obstacle {
-    fn serialize(self) -> [u8; 3] {
+    fn serialize(self) -> [u8; SERIALIZED_OBSTACLE_BYTE_SIZE] {
+        assert(SERIALIZED_OBSTACLE_BYTE_SIZE == 3, f"Obstacle byte size is not 3");
         assert(self.y < 0x10, f"Obstacle y is too large");
         assert(self.obstacle_type < 0x10, f"Obstacle type is too large");
 
         let packed_y = self.obstacle_type * 0x10 + self.y;
-        //(self.x as Field) + ((packed_y as Field) * 0x10000) + ((self.obstacle_type as Field) * 0x1000000)
         [ self.x, packed_y, self.health]
     }
 
-    fn parse(id: u8, field: [u8; 3], events: [Event; MAX_EVENTS]) -> Obstacle {
-        // let serialized_id = field as u8;
-        // assert(serialized_id == id, f"Obstacle id does not match serialized id {serialized_id} != {id}");
-        assert(id >= MAX_CHARACTERS, f"Obstacle id is lower than minimum {id}");
+    fn is_traversible(self) -> bool {
+        self.obstacle_type >= NON_EMPTY_WALKABLE_TILE_MIN
+    }
+
+    fn parse_theirs(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE]) -> Obstacle {
+        assert(SERIALIZED_OBSTACLE_BYTE_SIZE == 3, f"Obstacle byte size is not 3");
+        //assert((id as u64) >= MAX_CHARACTERS, f"Obstacle id is lower than minimum {id}");
+        let x = field[0];
+        let y = field[1] & 0x0F;
+        let obstacle_type = (field[1] & 0xF0) / 0x10;
+        let health = field[2];
+        let o = Obstacle {
+            id: id,
+            x: x,
+            y: y,
+            health: health,
+            obstacle_type: obstacle_type,
+        };
+        assert(o.is_valid());
+        o
+    }
+
+    fn parse(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE], events: [Event; MAX_EVENTS]) -> Obstacle {
+        assert(SERIALIZED_OBSTACLE_BYTE_SIZE == 3, f"Obstacle byte size is not 3");
+        //assert((id as u64) >= MAX_CHARACTERS, f"Obstacle id is lower than minimum {id}");
         let x = field[0];
         let y = field[1] & 0x0F;
         let obstacle_type = (field[1] & 0xF0) / 0x10;
         let mut health = field[2];
-        let was_alive = health > 0;
         if (obstacle_type == WALL) | (obstacle_type == WATER) {
             let mut damage = 0;
             for i in 0..MAX_EVENTS {
-                damage += events[i].get_applied_damage(x, y, obstacle_type);
+                damage += events[i].get_applied_damage_to_my_asset(x, y, obstacle_type);
             }
             if damage > (health as u16) {
                 health = 0;
@@ -52,12 +69,12 @@ impl Obstacle {
             }
         }
         let o = Obstacle {
-            id: id,
+            id: id, // + (MAX_CHARACTERS as u8),
             x: x,
             y: y,
             health: health,
             obstacle_type: obstacle_type,
-            was_alive: was_alive,
+            //was_alive: was_alive,
         };
         assert(o.is_valid());
         o
@@ -66,61 +83,76 @@ impl Obstacle {
     fn is_valid(self) -> bool {
         (self.x < WIDTH) & (self.y < HEIGHT)
     }
-}
 
-pub fn parse_obstacles(serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE], events: [Event; MAX_EVENTS]) -> [Obstacle; MAX_OBSTACLES] {
-    let mut obstacles: [Obstacle] = &[];
-    for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
-        let serialized_obstacle_field = serialized_obstacles[i].to_be_bytes(32);
-        for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
-            let serialized_obstacle = [serialized_obstacle_field[2 + j * 3], serialized_obstacle_field[2 + j * 3 + 1], serialized_obstacle_field[2 + j * 3 + 2]];
-            let id = (i * SERIALIZED_OBSTACLES_PER_FIELD + j) as u8;
-            obstacles = obstacles.push_back(Obstacle::parse(id, serialized_obstacle, events));
-        }
-    }
-    obstacles.as_array()
-}
-
-pub fn serialize_obstacles(obstacles: [Obstacle; MAX_OBSTACLES]) -> [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] {
-    let mut serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = [0; SERIALIZED_OBSTACLES_ARRAY_SIZE];
-    for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
-        let mut serialized_obstacle_field: [u8; 32] = [0; 32];
-        for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
-            let serialized_obstacle = obstacles[i * SERIALIZED_OBSTACLES_PER_FIELD + j].serialize();
-            for k in 0..3 {
-                serialized_obstacle_field[2 + j * 3 + k] = serialized_obstacle[k];
+    pub fn parse_their_obstacles<N>(serialized_obstacles: [Field; N]) -> [Obstacle] {
+        let mut obstacles: [Obstacle] = &[];
+        for i in 0..serialized_obstacles.len() {
+            let serialized_obstacle_field = serialized_obstacles[i].to_be_bytes(32);
+            for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
+                let serialized_obstacle = [serialized_obstacle_field[2 + j * 3], serialized_obstacle_field[2 + j * 3 + 1], serialized_obstacle_field[2 + j * 3 + 2]];
+                let id = (i * SERIALIZED_OBSTACLES_PER_FIELD + j) as u8;
+                obstacles = obstacles.push_back(Obstacle::parse_theirs(id, serialized_obstacle));
             }
         }
-        serialized_obstacles[i] = std::field::bytes32_to_field(serialized_obstacle_field);
+        obstacles
     }
-    serialized_obstacles
-}
 
-pub fn get_default_obstacles() -> [Obstacle; MAX_OBSTACLES] {
-    [
-        Obstacle { id:  0, x: 0, y: 2, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  1, x: 0, y: 3, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  2, x: 0, y: 4, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  3, x: 0, y: 5, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  4, x: 1, y: 2, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  5, x: 3, y: 2, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  6, x: 4, y: 2, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  7, x: 4, y: 3, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  8, x: 4, y: 4, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id:  9, x: 4, y: 5, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 10, x: 1, y: 4, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 11, x: 3, y: 4, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 12, x: 7, y: 0, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 13, x: 7, y: 1, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 14, x: 7, y: 2, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 15, x: 7, y: 3, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 16, x: 7, y: 4, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 17, x: 7, y: 5, obstacle_type: WALL,  health: 200, was_alive: true },
-        Obstacle { id: 18, x: 6, y: 8, obstacle_type: WATER, health: 255, was_alive: true },
-        Obstacle { id: 19, x: 7, y: 8, obstacle_type: WATER, health: 255, was_alive: true },
-        Obstacle { id: 20, x: 5, y: 9, obstacle_type: WATER, health: 255, was_alive: true },
-        Obstacle { id: 21, x: 6, y: 9, obstacle_type: WATER, health: 255, was_alive: true },
-        Obstacle { id: 22, x: 7, y: 9, obstacle_type: WATER, health: 255, was_alive: true },
-        Obstacle { id: 23, x: 8, y: 9, obstacle_type: WATER, health: 255, was_alive: true },
-    ]
+    pub fn parse_my_obstacles<N>(serialized_obstacles: [Field; N], events: [Event; MAX_EVENTS]) -> [Obstacle] {
+        let mut obstacles: [Obstacle] = &[];
+        for i in 0..serialized_obstacles.len() {
+            let serialized_obstacle_field = serialized_obstacles[i].to_be_bytes(32);
+            for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
+                let serialized_obstacle = [serialized_obstacle_field[2 + j * 3], serialized_obstacle_field[2 + j * 3 + 1], serialized_obstacle_field[2 + j * 3 + 2]];
+                let id = (i * SERIALIZED_OBSTACLES_PER_FIELD + j) as u8;
+                obstacles = obstacles.push_back(Obstacle::parse(id, serialized_obstacle, events));
+            }
+        }
+        obstacles
+    }
+
+    pub fn serialize_obstacles(obstacles: [Obstacle; MAX_OBSTACLES]) -> [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] {
+        let mut serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = [0; SERIALIZED_OBSTACLES_ARRAY_SIZE];
+        for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
+            let mut serialized_obstacle_field: [u8; 32] = [0; 32];
+            for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
+                let serialized_obstacle = obstacles[i * SERIALIZED_OBSTACLES_PER_FIELD + j].serialize();
+                for k in 0..3 {
+                    serialized_obstacle_field[2 + j * 3 + k] = serialized_obstacle[k];
+                }
+            }
+            serialized_obstacles[i] = std::field::bytes32_to_field(serialized_obstacle_field);
+        }
+        serialized_obstacles
+    }
+
+    pub fn get_default_obstacles(side: u8) -> [Obstacle; MAX_OBSTACLES] {
+        assert(side < 2, f"Side is too large {side}");
+        let x = |x| x * (side + 1) + (WIDTH - 1 - x) * side;
+        [
+            Obstacle { id:  0, x: x(0), y: 2, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  1, x: x(1), y: 2, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  2, x: x(3), y: 2, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  3, x: x(4), y: 2, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  4, x: x(5), y: 3, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  5, x: x(5), y: 4, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  6, x: x(5), y: 5, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  7, x: x(5), y: 7, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  8, x: x(4), y: 7, obstacle_type: WALL,  health: 200 },
+            Obstacle { id:  9, x: x(3), y: 7, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 10, x: x(1), y: 7, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 11, x: x(0), y: 7, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 12, x: x(7), y: 0, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 13, x: x(7), y: 1, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 14, x: x(7), y: 2, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 15, x: x(7), y: 3, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 16, x: x(7), y: 4, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 17, x: x(7), y: 5, obstacle_type: WALL,  health: 200 },
+            Obstacle { id: 18, x: x(6), y: 8, obstacle_type: WATER, health: 255 },
+            Obstacle { id: 19, x: x(7), y: 8, obstacle_type: WATER, health: 255 },
+            Obstacle { id: 20, x: x(5), y: 9, obstacle_type: WATER, health: 255 },
+            Obstacle { id: 21, x: x(6), y: 9, obstacle_type: WATER, health: 255 },
+            Obstacle { id: 22, x: x(7), y: 9, obstacle_type: WATER, health: 255 },
+            Obstacle { id: 23, x: x(8), y: 9, obstacle_type: WATER, health: 255 },
+        ]
+    }
 }
