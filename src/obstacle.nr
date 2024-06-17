@@ -127,7 +127,7 @@ impl Obstacle {
 
     pub fn get_default_obstacles(side: u8) -> [Obstacle; MAX_OBSTACLES] {
         assert(side < 2, f"Side is too large {side}");
-        let x = |x| x * (side + 1) + (WIDTH - 1 - x) * side;
+        let x = |x| x * ((side + 1) % 2) + (WIDTH - 1 - x) * side;
         [
             Obstacle { id:  0, x: x(0), y: 2, obstacle_type: WALL,  health: 200 },
             Obstacle { id:  1, x: x(1), y: 2, obstacle_type: WALL,  health: 200 },
