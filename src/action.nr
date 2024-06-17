@@ -10,7 +10,7 @@ use crate::NON_EMPTY_WALKABLE_TILE_MIN;
 use crate::character::Character;
 use crate::event::Event;
 use crate::event::{ build_std_event, build_subtype_value_event, build_value_event };
-use crate::map::is_neighbor;
+use crate::map::{ is_neighbor, is_visible };
 use crate::obstacle::Obstacle;
 use dep::std;
 
@@ -108,6 +108,7 @@ impl Action {
             result_char.y = self.target_y;
             result_char.status = 0;
             required_energy = c.get_energy_per_move();
+            result_char.has_been_seen = is_visible(side, enemy_advance, result_char.x);
             if c.get_has_been_seen() {
                 result_event = build_std_event(SEE_MOVE, c.id, self.target_x, self.target_y);
             }
