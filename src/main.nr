@@ -11,7 +11,11 @@ mod map;
 use dep::std;
 
 // MAP
-global WIDTH = 32;
+global WIDTH_BITS = 5;
+global WIDTH_MASK = (1 << WIDTH_BITS) - 1 as u8;
+global WIDTH = 1 << WIDTH_BITS;
+global HEIGHT_BITS = 4;
+global HEIGHT_MASK = (1 << HEIGHT_BITS) - 1 as u8;
 global HEIGHT = 10;
 global NOWHERE = 255;
 
@@ -22,6 +26,8 @@ global RITUALIST = 2 as u8;
 global ROGUE = 3 as u8;
 global KNIGHT = 4 as u8;
 global MAGE = 5 as u8;
+global CLASS_BITS = 3;
+global CLASS_MASK = (1 << CLASS_BITS) - 1 as u8;
 global CLASS_COUNT = 6 as u8;
 
 // ACTIONS
@@ -87,6 +93,8 @@ global FIREBALL_ROUNDS_FOR_CAST = 3 as u8;
 global DRAW_ROUNDS_FOR_SHOOT = 1 as u8;
 global MIN_DRAW_ROUNDS_FOR_SHOOT = 1 as u8;
 global MAX_DRAW_ROUNDS_FOR_SHOOT = 3 as u8;
+global STATUS_BITS = 4;
+global STATUS_MASK = (1 << STATUS_BITS) - 1 as u8;
 global STATUS_COUNT = 16  as u8; // just to be more in line with the other constants, actually used as a counter
 
 // GAMEPLAY

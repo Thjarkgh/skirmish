@@ -8,6 +8,8 @@ use crate::WIDTH;
 use crate::HEIGHT;
 use crate::{ CLASS_COUNT, STATUS_COUNT };
 use crate::{ MAX_CHARACTERS, MAX_EVENTS, MAX_OBSTACLES };
+use crate::{ WIDTH_MASK, HEIGHT_MASK, CLASS_MASK, STATUS_MASK };
+use crate::{ WIDTH_BITS, HEIGHT_BITS, CLASS_BITS, STATUS_BITS };
 use crate::event::Event;
 use crate::{ WALL, WATER };
 use crate::obstacle::Obstacle;
@@ -167,11 +169,18 @@ impl Character {
     }
 
     pub fn serialize(self) -> [u8; 6] {
+        assert(WIDTH <= WIDTH_MASK + 1);
+        assert(HEIGHT <= HEIGHT_MASK + 1);
+        assert(CLASS_COUNT <= CLASS_MASK + 1);
+        assert(STATUS_COUNT <= STATUS_MASK + 1);
+        assert(WIDTH_BITS + CLASS_BITS <= 8);
+        assert(HEIGHT_BITS + STATUS_BITS <= 8);
+        assert(WIDTH_BITS + 1 <= 8);
         assert(self.is_valid());
-        let packed_x = self.x | (self.class << 5);
-        let packed_y = self.y | (self.status << 4);
-        let packed_target_x = (self.target_x & 31) + ((self.is_hidden as u8) << 5);
-        let packed_target_y = self.target_y & 15;
+        let packed_x = self.x | (self.class << WIDTH_BITS);
+        let packed_y = self.y | (self.status << HEIGHT_BITS);
+        let packed_target_x = (self.target_x & WIDTH_MASK) + ((self.is_hidden as u8) << WIDTH_BITS);
+        let packed_target_y = self.target_y & HEIGHT_MASK;
         
         [packed_x, packed_y, self.health, packed_target_x, packed_target_y, 0]
     }
@@ -216,28 +225,31 @@ impl Character {
 
     pub fn parse(id: u8, data: Field, events: [Event; MAX_EVENTS], enemy_advance: u8, side: u1) -> Character {
         // these asserts could be disabled for production
-        assert(WIDTH <= 32);
-        assert(HEIGHT <= 16);
-        assert(CLASS_COUNT <= 8);
-        assert(STATUS_COUNT <= 16);
+        assert(WIDTH <= WIDTH_MASK + 1);
+        assert(HEIGHT <= HEIGHT_MASK + 1);
+        assert(CLASS_COUNT <= CLASS_MASK + 1);
+        assert(STATUS_COUNT <= STATUS_MASK + 1);
+        assert(WIDTH_BITS + CLASS_BITS <= 8);
+        assert(HEIGHT_BITS + STATUS_BITS <= 8);
+        assert(WIDTH_BITS + 1 <= 8);
 
         let split = data.to_be_bytes(32);
         let x_packed = split[2 + id * 6]; // 5 bit x, 3 bit class
         let y_packed = split[2 + id * 6 + 1]; // 4 bit y, 4 bit status
+        let mut health = split[2 + id * 6 + 2] as u16;
         let target_x_packed = split[2 + id * 6 + 3]; // 5 bit target x, 1 bit hidden, 1 bit has target, 1 bit unused
         let target_y_packed = split[2 + id * 6 + 4]; // 4 bit target y, 4 bit unused
         // one byte left for future use
 
-        let x = x_packed & 31;
-        let y = y_packed & 15;
-        let class = (x_packed >> 5) & 7;
-        let status = (y_packed >> 4) & 15;
-        let mut health = split[2 + id * 6 + 2] as u16;
-        let target_x = target_x_packed & 31;
-        let target_y = target_y_packed & 15;
+        let x = x_packed & WIDTH_MASK;
+        let y = y_packed & HEIGHT_MASK;
+        let class = (x_packed >> WIDTH_BITS) & CLASS_MASK;
+        let status = (y_packed >> HEIGHT_BITS) & STATUS_MASK;
+        let target_x = target_x_packed & WIDTH_MASK;
+        let target_y = target_y_packed & HEIGHT_MASK;
 
         let is_visible = (x >= enemy_advance) == (side == 0); //((target_x_packed >> 5) & 1) as u1;
-        let is_hidden = ((target_x_packed >> 5) & 1) as u1;
+        let is_hidden = ((target_x_packed >> WIDTH_BITS) & 1) as u1;
 
         let mut damage: u16 = 0;
         for i in 0..MAX_EVENTS {
