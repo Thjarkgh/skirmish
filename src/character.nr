@@ -18,7 +18,7 @@ use crate::obstacle::Obstacle;
 // this should be more efficient: for all the following: order is: UNKNOWN_CLASS, ARCHER, RITUALIST, ROGUE, KNIGHT, MAGE
 global class_damage_melee = [ 0, 32, 8, 24, 40, 16 ];
 global class_damage_ranged = [ 0, 24, 40, 16, 32, 8 ];
-global class_damage_fireball = [ 0, 40, 16, 32, 8, 24 ];
+global class_damage_fireball = [ 0, 0, 100, 50, 0, 100 ];
 global class_damage = [ class_damage_melee, class_damage_ranged, class_damage_fireball ];
 global class_energy_per_attack = [ 0, 7, 7, 7, 6, 7 ];
 global class_energy_per_cast = [ 0, 255, 12, 255, 255, 6 ];
