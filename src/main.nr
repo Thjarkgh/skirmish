@@ -177,7 +177,7 @@ fn main(
     for i in 0..MAX_ACTIONS {
         // TODO: ensure that if actor committed suicide, it is not allowed to do any more actions
         let action = actions[i];
-        let result = action.execute(actor, energy, my_obstacles_parsed, enemy_objects_parsed);
+        let result = action.execute(side, enemy_advance, actor, energy, my_obstacles_parsed, enemy_objects_parsed);
         let result_event = result.0;
         actor = result.1;
         energy = result.2;
@@ -219,7 +219,7 @@ fn main(
 
     // validate result
     let serialized_characters = serialize_chars(my_chars);
-    let serialized_obstacles: [Field] = Obstacle::serialize_obstacles(my_obstacles_parsed);
+    let serialized_obstacles: [Field] = Obstacle::serialize_obstacles(side, enemy_advance, my_obstacles_parsed);
     assert(serialized_obstacles.len() == SERIALIZED_OBSTACLES_ARRAY_SIZE);
     let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), serialized_characters.to_be_bytes(32), serialized_obstacles.as_array());
     let new_hash = std::field::bytes32_to_field(new_hash_bytes);
