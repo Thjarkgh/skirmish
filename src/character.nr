@@ -254,7 +254,7 @@ impl Character {
             health -= damage;
         }
 
-        Character {
+        let c = Character {
             id: id,
             x: x,
             y: y,
@@ -266,13 +266,15 @@ impl Character {
             target_x: target_x,
             target_y: target_y,
             damage_mod: 0,
-        }
+        };
+        assert(c.is_valid());
+        c
     }
 }
 
 pub fn get_default_characters(side: u8) -> [Character; MAX_CHARACTERS] {
     assert(side < 2, f"Side is too large {side}");
-    let x = |x| x * (side + 1) + (WIDTH - 1 - x) * side;
+    let x = |x| x * ((side + 1) % 2) + (WIDTH - 1 - x) * side;
     [
         Character { id: 0, x: x(2), y: 2, class: ARCHER, health: 100, status: 0, target_x: 255, target_y: 255, has_been_seen: false, damage_mod: 0, is_hidden: 0 },
         Character { id: 1, x: x(2), y: 3, class: RITUALIST, health: 60, status: 0, target_x: 255, target_y: 255, has_been_seen: false, damage_mod: 0, is_hidden: 0 },
@@ -364,13 +366,13 @@ fn test_parse_character() {
         0 as u8, 0 as u8,
         0 as u8, 0 as u8, 0 as u8, 0 as u8, 0 as u8, 0 as u8,
         0 as u8, 0 as u8, 0 as u8, 0 as u8, 0 as u8, 0 as u8,
-        255 as u8, 255 as u8, 255 as u8, 255 as u8, 255 as u8, 255 as u8,
+        191 as u8, 159 as u8, 255 as u8, 255 as u8, 9 as u8, 255 as u8,
         181 as u8, 153 as u8, 129 as u8, 127 as u8, 15 as u8, 0 as u8,
         0 as u8, 0 as u8, 0 as u8, 0 as u8, 0 as u8, 0 as u8,
     ];
     let data: Field = std::field::bytes32_to_field(data_array);
     println(data);
-    assert(data == 0xffffffffffffb599817f0f00000000000000, f"Failed assumption: data: {data} != 0xffffffffffffb599817f0f000000000000000000");
+    assert(data == 0xff9fffff09ffb599817f0f00000000000000, f"Failed assumption: data: {data} != 0xff9fffff09ffb599817f0f00000000000000");
     let character = Character::parse(3, data, dummy_events, 20, 0);
     assert(character.get_id() == 3);
     assert(character.get_x() == 21);
@@ -385,7 +387,7 @@ fn test_parse_character() {
     let character_max = Character::parse(2, data, dummy_events, 20, 0);
     assert(character_max.get_id() == 2);
     assert(character_max.get_x() == 31);
-    assert(character_max.get_y() == 15);
+    assert(character_max.get_y() == 9);
     assert(character_max.get_class() == 7);
     assert(character_max.get_status() == 15);
     assert(character_max.get_health() == 255);
