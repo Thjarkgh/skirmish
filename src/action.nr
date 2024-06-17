@@ -141,6 +141,7 @@ impl Action {
         if self.action == CAST_FIREBALL {
             assert(c.can_cast_fireball());
             result_char.status += 1;
+            assert(result_char.status <= FIREBALL_ROUNDS_FOR_CAST);
             if result_char.status >= FIREBALL_ROUNDS_FOR_CAST {
                 // TODO: handle friendly fire and destruction of own walls and own traps
                 result_event = build_subtype_value_event(RECEIVE_ATTACK, c.id, self.target_x, self.target_y, c.get_damage(ATTACK_FIREBALL), ATTACK_FIREBALL);
