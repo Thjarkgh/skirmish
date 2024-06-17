@@ -337,18 +337,53 @@ fn test_main() {
         Action { action: MOVE, actor: 0, target_x: 5, target_y: 1 },
     ];
     let mut move = 0;
+    let mut char_0 = chars[0][0].move(5, 1);
+    let mut last_hashes = [ 0x266a56eeca3c428d06ac08bc2741290db9d5b0714cdc96cd7330781e2f06c2b3, 0x168c5ee3c58a94477b8739bd1ac67564f7474e181e3948594d5317243c024da3 ];
+    let mut current_hashes = [ 0x0d66c10ceaf16643f43c3273d57568a18ba7c74494703772fa79e4ed46144f6a, 0x0297cb9d021ad39ad6aa0a2644cfabe8a83036c05e66cc96da94e0ede5c393a9 ];
+    let mut advances = [2 + VIEW_DISTANCE, 29 - VIEW_DISTANCE];
+    advances[0] = 5 + VIEW_DISTANCE;
     main(
         123456789,
         character::serialize_chars(chars[0]),
         Obstacle::serialize_obstacles(obs[0]),
         Action::serialize_actions(actions),
         move,
-        2 + VIEW_DISTANCE,
+        advances[1],
         [0, 0, 0, 0], // enemy objects
-        [0], // events
-        11, // result advance
+        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // events
+        advances[0], // result advance
         Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // my result events (should)
-        test_result_object_builder([ chars[0][0].move(5, 1), chars[0][1], chars[0][2], chars[0][3], chars[0][4] ], Obstacle::serialize_obstacles(obs[0])), // my visible objects
-        0x266a56eeca3c428d06ac08bc2741290db9d5b0714cdc96cd7330781e2f06c2b3,
-        0x0d66c10ceaf16643f43c3273d57568a18ba7c74494703772fa79e4ed46144f6a);
+        test_result_object_builder([ char_0, chars[0][1], chars[0][2], chars[0][3], chars[0][4] ], Obstacle::serialize_obstacles(obs[0])), // my visible objects
+        last_hashes[0],
+        current_hashes[0]
+    );
+    chars[0][0] = char_0;
+    last_hashes[0] = current_hashes[0];
+
+    let actions = &[
+        Action { action: MOVE, actor: 0, target_x: 29, target_y: 1 },
+        Action { action: MOVE, actor: 0, target_x: 28, target_y: 1 },
+        Action { action: MOVE, actor: 0, target_x: 28, target_y: 0 },
+        Action { action: MOVE, actor: 0, target_x: 27, target_y: 0 },
+    ];
+    move = 1;
+    char_0 = chars[1][0].move(27, 0);
+    advances[1] = 27 - VIEW_DISTANCE;
+    main(
+        9876543210,
+        character::serialize_chars(chars[1]),
+        Obstacle::serialize_obstacles(obs[1]),
+        Action::serialize_actions(actions),
+        move,
+        advances[0],
+        [0, 0, 0, 0], // enemy objects
+        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // events
+        advances[1], // result advance
+        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // my result events (should)
+        test_result_object_builder([ char_0, chars[1][1], chars[1][2], chars[1][3], chars[1][4] ], Obstacle::serialize_obstacles(obs[1])), // my visible objects
+        last_hashes[1],
+        current_hashes[1]
+    );
+    chars[1][0] = char_0;
+    last_hashes[1] = current_hashes[1];
 }
