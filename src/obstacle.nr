@@ -1,6 +1,6 @@
 use crate::MAX_OBSTACLES;
 use crate::{ HEIGHT, WIDTH };
-use crate::{ WALL, WATER };
+use crate::{ EMPTY, WALL, WATER };
 use crate::{ MAX_CHARACTERS, MAX_EVENTS };
 use crate::{ RECEIVE_ATTACK };
 use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
@@ -29,7 +29,7 @@ impl Obstacle {
     }
 
     fn is_traversible(self) -> bool {
-        self.obstacle_type >= NON_EMPTY_WALKABLE_TILE_MIN
+        (self.obstacle_type >= NON_EMPTY_WALKABLE_TILE_MIN) | (self.obstacle_type == EMPTY)
     }
 
     fn parse_theirs(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE]) -> Obstacle {
