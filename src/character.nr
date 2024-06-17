@@ -207,6 +207,24 @@ impl Character {
         c
     }
 
+    pub fn take_damage(self, attack_type: u8, dmg: u8) -> Character {
+        let damage_after_resistances = get_attack_damage_to_tile(attack_type, dmg as u16, self.class);
+        let mut c = self;
+        if damage_after_resistances > (c.health as u16) {
+            c.health = 0;
+        } else {
+            c.health -= (damage_after_resistances as u8);
+        }
+        c
+    }
+
+    pub fn set_status(self, status: u8) -> Character {
+        assert(status < STATUS_COUNT);
+        let mut c = self;
+        c.status = status;
+        c
+    }
+
     pub fn create_character(id: u8, x: u8, y: u8, class: u8) -> Character {
         let c = Character {
             id: id,
