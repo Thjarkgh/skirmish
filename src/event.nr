@@ -27,7 +27,7 @@ impl Event {
         assert(SERIALIZED_EVENTS_ARRAY_SIZE * SERIALIZED_EVENTS_PER_FIELD == MAX_EVENTS);
         assert(SERIALIZED_EVENT_BYTE_SIZE >= 6);
 
-        let mut events: [Event; MAX_EVENTS] = [Event::empty(); MAX_EVENTS];
+        let mut events: [Event; MAX_EVENTS] = [Event::empty(0); MAX_EVENTS];
         for i in 0..SERIALIZED_EVENTS_ARRAY_SIZE {
             let split = fields[i].to_be_bytes(32);
             for j in 0..SERIALIZED_EVENTS_PER_FIELD {
@@ -104,10 +104,10 @@ impl Event {
         damage as u16
     }
 
-    pub fn empty() -> Event {
+    pub fn empty(actor_id: u8) -> Event {
         Event {
             event: NO_EVENT,
-            actor_id: 0,
+            actor_id: actor_id,
             x: 0,
             y: 0,
             value: 0,
@@ -120,7 +120,7 @@ impl Event {
     }
 
     pub fn get_test_dummy_events() -> [Event; MAX_EVENTS] {
-        [Event::empty(); MAX_EVENTS]
+        [Event::empty(0); MAX_EVENTS]
     }
 }
 
