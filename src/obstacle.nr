@@ -7,7 +7,7 @@ use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
 use crate::{ SERIALIZED_OBSTACLE_BYTE_SIZE, SERIALIZED_OBSTACLES_PER_FIELD, SERIALIZED_OBSTACLES_ARRAY_SIZE };
 use crate::NON_EMPTY_WALKABLE_TILE_MIN;
 use crate::event::Event;
-use crate::map::is_neighbor;
+use crate::map::{ is_neighbor, is_visible };
 use dep::std;
 
 struct Obstacle {
@@ -110,14 +110,17 @@ impl Obstacle {
         obstacles
     }
 
-    pub fn serialize_obstacles(obstacles: [Obstacle; MAX_OBSTACLES]) -> [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] {
+    pub fn serialize_obstacles(side: u1, enemy_advance: u8, obstacles: [Obstacle; MAX_OBSTACLES]) -> [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] {
         let mut serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE] = [0; SERIALIZED_OBSTACLES_ARRAY_SIZE];
         for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
             let mut serialized_obstacle_field: [u8; 32] = [0; 32];
             for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
-                let serialized_obstacle = obstacles[i * SERIALIZED_OBSTACLES_PER_FIELD + j].serialize();
-                for k in 0..3 {
-                    serialized_obstacle_field[2 + j * 3 + k] = serialized_obstacle[k];
+                let obstacle = obstacles[i * SERIALIZED_OBSTACLES_PER_FIELD + j];
+                if is_visible(side, enemy_advance, obstacle.x) {
+                    let serialized_obstacle = obstacle.serialize();
+                    for k in 0..3 {
+                        serialized_obstacle_field[2 + j * 3 + k] = serialized_obstacle[k];
+                    }
                 }
             }
             serialized_obstacles[i] = std::field::bytes32_to_field(serialized_obstacle_field);

@@ -12,6 +12,7 @@ use crate::{ WIDTH_MASK, HEIGHT_MASK, CLASS_MASK, STATUS_MASK };
 use crate::{ WIDTH_BITS, HEIGHT_BITS, CLASS_BITS, STATUS_BITS };
 use crate::event::Event;
 use crate::{ WALL, WATER };
+use crate::map::is_visible;
 use crate::obstacle::Obstacle;
 
 // this should be more efficient: for all the following: order is: UNKNOWN_CLASS, ARCHER, RITUALIST, ROGUE, KNIGHT, MAGE
@@ -249,7 +250,7 @@ impl Character {
         let target_x = target_x_packed & WIDTH_MASK;
         let target_y = target_y_packed & HEIGHT_MASK;
 
-        let is_visible = (x >= enemy_advance) == (side == 0); //((target_x_packed >> 5) & 1) as u1;
+        let is_visible = is_visible(side, enemy_advance, x); //((target_x_packed >> 5) & 1) as u1;
         let is_hidden = ((target_x_packed >> WIDTH_BITS) & 1) as u1;
 
         let mut damage: u16 = 0;
