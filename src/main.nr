@@ -346,8 +346,8 @@ fn test_main() {
     ];
     let mut move = 0;
     let mut char_0 = chars[0][0].move(5, 1);
-    let mut last_hashes = [ 0x266a56eeca3c428d06ac08bc2741290db9d5b0714cdc96cd7330781e2f06c2b3, 0x168c5ee3c58a94477b8739bd1ac67564f7474e181e3948594d5317243c024da3 ];
-    let mut current_hashes = [ 0x0d66c10ceaf16643f43c3273d57568a18ba7c74494703772fa79e4ed46144f6a, 0x0297cb9d021ad39ad6aa0a2644cfabe8a83036c05e66cc96da94e0ede5c393a9 ];
+    let mut last_hashes = [ 0x0b631e4d54428e69bd3638c46b7844965d52c53cbe12099560f602516cc6731f, 0x1b54eb0713895d17d4be88ce9b00f954a85499ff02ffb3ae46c2c7414fa4ffab ];
+    let mut current_hashes = [ 0x1262eefd725d675e030a8bb31f034156dd86de79c5be2bf43438039fe8fe6903, 0x142dced336d1247df2ff5e15e57b6aefdbada8a5e3ec377ac02f63c991e4ec10 ];
     let mut advances = [2 + VIEW_DISTANCE, 29 - VIEW_DISTANCE];
     advances[0] = 5 + VIEW_DISTANCE;
     main(
