@@ -85,7 +85,7 @@ impl Action {
     //     self.action as Field + (self.actor as Field) * 0x100 + (self.target_x as Field) * 0x10000 + (self.target_y as Field) * 0x1000000
     // }
 
-    fn execute(self, c: Character, mut energy: u8, my_obstacles_parsed: [Obstacle; MAX_OBSTACLES], their_obstacles: [Obstacle]) -> (Event, Character, u8) {
+    fn execute(self, side: u1, enemy_advance: u8, c: Character, mut energy: u8, my_obstacles_parsed: [Obstacle; MAX_OBSTACLES], their_obstacles: [Obstacle]) -> (Event, Character, u8) {
         // WAIT: Do nothing
 
         let mut result_event: Event = build_std_event(NO_EVENT, c.id, 0, 0);
