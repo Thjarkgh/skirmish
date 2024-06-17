@@ -184,7 +184,7 @@ impl Character {
         let packed_target_x = (self.target_x & WIDTH_MASK) + ((self.is_hidden as u8) << WIDTH_BITS);
         let packed_target_y = self.target_y & HEIGHT_MASK;
         
-        [packed_x, packed_y, self.health, packed_target_x, packed_target_y, 0]
+        [packed_x, packed_y, self.health, packed_target_x, packed_target_y, self.damage_mod]
     }
 
     pub fn to_obstacle(self) -> Obstacle {
@@ -259,7 +259,7 @@ impl Character {
         let mut health = split[2 + id * 6 + 2] as u16;
         let target_x_packed = split[2 + id * 6 + 3]; // 5 bit target x, 1 bit hidden, 1 bit has target, 1 bit unused
         let target_y_packed = split[2 + id * 6 + 4]; // 4 bit target y, 4 bit unused
-        // one byte left for future use
+        let damage_mod = split[2 + id * 6 + 5]; // last byte: for the moment, use to save damage_mod (buffs, etc)
 
         let x = x_packed & WIDTH_MASK;
         let y = y_packed & HEIGHT_MASK;
@@ -297,7 +297,7 @@ impl Character {
             is_hidden: is_hidden,
             target_x: target_x,
             target_y: target_y,
-            damage_mod: 0,
+            damage_mod: damage_mod,
         };
         assert(c.is_valid());
         c
