@@ -221,6 +221,9 @@ fn main(
     let serialized_characters = serialize_chars(my_chars);
     let serialized_obstacles: [Field] = Obstacle::serialize_obstacles(side, enemy_advance, my_obstacles_parsed);
     assert(serialized_obstacles.len() == SERIALIZED_OBSTACLES_ARRAY_SIZE);
+    // println(secret);
+    // println(serialized_characters);
+    // println(serialized_obstacles);
     let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), serialized_characters.to_be_bytes(32), serialized_obstacles.as_array());
     let new_hash = std::field::bytes32_to_field(new_hash_bytes);
     let serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1] = serialized_obstacles.push_back(serialize_chars_as_obstacles(my_chars)).as_array();
@@ -334,64 +337,185 @@ fn test_result_object_builder(chars: [Character; MAX_CHARACTERS], obs: [Field; S
     result
 }
 
+fn test_helper_roster(actor: Character, mut chars: [Character; MAX_CHARACTERS]) -> [Character; MAX_CHARACTERS] {
+    chars[actor.id] = actor;
+    chars
+}
+
+fn test_helper_execute_move(move: u32, actor: Character, advances: [u8; 2], secret: [Field; 2], last_hashes: [Field; 2], chars: [[Character; MAX_CHARACTERS]; 2], obs: [[Obstacle; MAX_OBSTACLES]; 2], actions: [Action], my_events: [Event], their_events: [Event]) -> (u32, [Character; MAX_CHARACTERS], Field) {
+    let side = move as u1;
+    let other_side = (side as u8 + 1) as u1;
+    let chars_after = test_helper_roster(actor, chars[side]);
+    let my_obstacles_serialized = Obstacle::serialize_obstacles(side, advances[other_side], obs[side]);
+    let current_hash = std::field::bytes32_to_field(get_data_hash(secret[side].to_be_bytes(32), serialize_chars(chars_after).to_be_bytes(32), my_obstacles_serialized)); 
+
+    main(
+        secret[side],
+        character::serialize_chars(chars[side]),
+        my_obstacles_serialized,
+        Action::serialize_actions(actions),
+        move,
+        advances[other_side],
+        test_result_object_builder(chars[other_side], Obstacle::serialize_obstacles(other_side, advances[side], obs[other_side])),
+        Event::serialize_events(their_events).as_array(),
+        advances[side],
+        Event::serialize_events(my_events).as_array(),
+        test_result_object_builder(chars_after, my_obstacles_serialized),
+        last_hashes[side],
+        current_hash
+    );
+
+    (move + 1, chars_after, current_hash)
+}
+
+// #[test]
+// fn test_main() {
+//     let secrets = [123456789, 9876543210];
+//     let mut chars = [ character::get_default_characters(0), character::get_default_characters(1) ];
+//     let mut obs = [ Obstacle::get_default_obstacles(0), Obstacle::get_default_obstacles(1) ];
+//     let actions = &[
+//         Action { action: MOVE, actor: 0, target_x: 2, target_y: 1 },
+//         Action { action: MOVE, actor: 0, target_x: 3, target_y: 1 },
+//         Action { action: MOVE, actor: 0, target_x: 4, target_y: 1 },
+//         Action { action: MOVE, actor: 0, target_x: 5, target_y: 1 },
+//     ];
+//     let their_events: [Event] = &[Event::empty(0); MAX_EVENTS];
+//     let my_events: [Event] = &[Event::empty(0); MAX_EVENTS];
+//     let mut move = 0;
+//     let mut actor = chars[0][0].move(5, 1);
+//     let mut last_hashes = [ 0x12b8f97907a05ec6a77da3f70368fa3b02e166c74edab8ea0695d6f406146559, 0x2bca22f32b0b864574d0509ba146be256d2186fc490311756f541e1b5f8e391f ];
+//     let mut advances = [2 + VIEW_DISTANCE, 29 - VIEW_DISTANCE];
+//     advances[0] = 5 + VIEW_DISTANCE;
+
+//     let mut side = move % 2;
+//     let result = test_helper_execute_move(move, actor, advances, secrets, last_hashes, chars, obs, actions, my_events, their_events);
+//     move = result.0;
+//     chars[side] = result.1;
+//     last_hashes[side] = result.2;
+
+//     side = move % 2;
+//     let actions = &[
+//         Action { action: MOVE, actor: 0, target_x: 29, target_y: 1 },
+//         Action { action: MOVE, actor: 0, target_x: 28, target_y: 1 },
+//         Action { action: MOVE, actor: 0, target_x: 28, target_y: 0 },
+//         Action { action: MOVE, actor: 0, target_x: 27, target_y: 0 },
+//     ];
+//     let their_events = my_events;
+//     let my_events: [Event] = &[Event::empty(0); MAX_EVENTS];
+//     let actor = chars[side][((move as u64 / 2) % MAX_CHARACTERS)].move(27, 0);
+//     advances[side] = 27 - VIEW_DISTANCE;
+//     let result = test_helper_execute_move(move, actor, advances, secrets, last_hashes, chars, obs, actions, my_events, their_events);
+//     move = result.0;
+//     chars[side] = result.1;
+//     last_hashes[side] = result.2;
+
+//     side = move % 2;
+//     let actions = &[
+//         Action { action: MOVE, actor: 1, target_x: 1, target_y: 3 },
+//         Action { action: MOVE, actor: 1, target_x: 0, target_y: 3 },
+//         Action { action: WAIT, actor: 1, target_x: 0, target_y: 0 },
+//         Action { action: WAIT, actor: 1, target_x: 0, target_y: 0 },
+//     ];
+//     let their_events = my_events;
+//     let my_events: [Event] = &[Event::empty(1); MAX_EVENTS];
+//     let actor = chars[side][((move as u64 / 2) % MAX_CHARACTERS)].move(0, 3);
+//     //advances[side] = 27 - VIEW_DISTANCE;
+//     let result = test_helper_execute_move(move, actor, advances, secrets, last_hashes, chars, obs, actions, my_events, their_events);
+//     move = result.0;
+//     chars[side] = result.1;
+//     last_hashes[side] = result.2;
+
+//     side = move % 2;
+//     let actions = &[
+//         Action { action: MOVE, actor: 1, target_x: 29, target_y: 2 },
+//         Action { action: MOVE, actor: 1, target_x: 29, target_y: 1 },
+//         Action { action: MOVE, actor: 1, target_x: 28, target_y: 1 },
+//         Action { action: WAIT, actor: 1, target_x: 0, target_y: 0 },
+//     ];
+//     let their_events = my_events;
+//     let my_events: [Event] = &[Event::empty(1); MAX_EVENTS];
+//     let actor = chars[side][((move as u64 / 2) % MAX_CHARACTERS)].move(28, 1);
+//     //advances[side] = 27 - VIEW_DISTANCE;
+//     let result = test_helper_execute_move(move, actor, advances, secrets, last_hashes, chars, obs, actions, my_events, their_events);
+//     move = result.0;
+//     chars[side] = result.1;
+//     last_hashes[side] = result.2;
+// }
+
 #[test]
-fn test_main() {
-    let mut chars = [ character::get_default_characters(0), character::get_default_characters(1) ];
+fn test_main_fireball_ff() {
+    let secrets = [123456789, 9876543210];
+    let mut chars = [
+        [
+            Character { id: 0, class: ARCHER, x: 9, y: 2, health: 100, status: 1, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+            Character { id: 1, class: RITUALIST, x: 11, y: 3, health: 25, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+            Character { id: 2, class: ROGUE, x: 12, y: 4, health: 20, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 1, damage_mod: 0 },
+            Character { id: 3, class: KNIGHT, x: 10, y: 4, health: 100, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+            Character { id: 4, class: MAGE, x: 10, y: 7, health: 100, status: 2, target_x: 11, target_y: 4, has_been_seen: true, is_hidden: 0, damage_mod: 10 },
+        ], [
+            Character { id: 0, class: MAGE, x: 13, y: 2, health: 100, status: 2, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+            Character { id: 1, class: ROGUE, x: 14, y: 6, health: 0, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 1, damage_mod: 0 },
+            Character { id: 2, class: RITUALIST, x: 16, y: 3, health: 20, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+            Character { id: 3, class: ARCHER, x: 16, y: 6, health: 100, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+            Character { id: 4, class: KNIGHT, x: 11, y: 4, health: 30, status: 0, target_x: 0, target_y: 0, has_been_seen: true, is_hidden: 0, damage_mod: 0 },
+        ]
+    ];
     let mut obs = [ Obstacle::get_default_obstacles(0), Obstacle::get_default_obstacles(1) ];
     let actions = &[
-        Action { action: MOVE, actor: 0, target_x: 2, target_y: 1 },
-        Action { action: MOVE, actor: 0, target_x: 3, target_y: 1 },
-        Action { action: MOVE, actor: 0, target_x: 4, target_y: 1 },
-        Action { action: MOVE, actor: 0, target_x: 5, target_y: 1 },
+        Action { action: CAST_FIREBALL, actor: 4, target_x: 11, target_y: 4 },
+        Action { action: MOVE, actor: 4, target_x: 9, target_y: 7 },
+        Action { action: WAIT, actor: 4, target_x: 0, target_y: 0 },
+        Action { action: WAIT, actor: 4, target_x: 0, target_y: 0 },
     ];
-    let mut move = 0;
-    let mut char_0 = chars[0][0].move(5, 1);
-    let mut last_hashes = [ 0x0b631e4d54428e69bd3638c46b7844965d52c53cbe12099560f602516cc6731f, 0x1b54eb0713895d17d4be88ce9b00f954a85499ff02ffb3ae46c2c7414fa4ffab ];
-    let mut current_hashes = [ 0x1262eefd725d675e030a8bb31f034156dd86de79c5be2bf43438039fe8fe6903, 0x142dced336d1247df2ff5e15e57b6aefdbada8a5e3ec377ac02f63c991e4ec10 ];
-    let mut advances = [2 + VIEW_DISTANCE, 29 - VIEW_DISTANCE];
-    advances[0] = 5 + VIEW_DISTANCE;
-    main(
-        123456789,
-        character::serialize_chars(chars[0]),
-        Obstacle::serialize_obstacles(obs[0]),
-        Action::serialize_actions(actions),
-        move,
-        advances[1],
-        [0, 0, 0, 0], // enemy objects
-        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // events
-        advances[0], // result advance
-        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // my result events (should)
-        test_result_object_builder([ char_0, chars[0][1], chars[0][2], chars[0][3], chars[0][4] ], Obstacle::serialize_obstacles(obs[0])), // my visible objects
-        last_hashes[0],
-        current_hashes[0]
-    );
-    chars[0][0] = char_0;
-    last_hashes[0] = current_hashes[0];
+    let their_events: [Event] = &[
+        Event { event: RECEIVE_ATTACK, actor_id: 3, x: 11, y: 3, subtype: ATTACK_RANGED, value: 50 },
+        Event { event: SEE_MOVE, actor_id: 3, x: 16, y: 5, subtype: 0, value: 0 },
+        Event { event: SEE_MOVE, actor_id: 3, x: 16, y: 6, subtype: 0, value: 0 },
+        Event { event: NO_EVENT, actor_id: 3, x: 0, y: 0, subtype: 0, value: 0 },
+    ];
+    let my_events: [Event] = &[
+        Event { event: RECEIVE_ATTACK, actor_id: 4, x: 11, y: 4, subtype: ATTACK_FIREBALL, value: 110 },
+        Event { event: SEE_MOVE, actor_id: 4, x: 9, y: 7, subtype: 0, value: 0 },
+        Event { event: NO_EVENT, actor_id: 4, x: 0, y: 0, subtype: 0, value: 0 },
+        Event { event: NO_EVENT, actor_id: 4, x: 0, y: 0, subtype: 0, value: 0 },
+    ];
+    let mut move = 8;
+    let mut actor = chars[0][4].move(9, 7).set_status(0);
+    let mut last_hashes = [ 0x090a46a65d4c7c05f3c98b25c2639539d91c1542fd78e9c9c837f96de08c6a84, 0x2bca22f32b0b864574d0509ba146be256d2186fc490311756f541e1b5f8e391f ];
+    let mut advances = [12 + VIEW_DISTANCE, 11 - VIEW_DISTANCE];
 
-    let actions = &[
-        Action { action: MOVE, actor: 0, target_x: 29, target_y: 1 },
-        Action { action: MOVE, actor: 0, target_x: 28, target_y: 1 },
-        Action { action: MOVE, actor: 0, target_x: 28, target_y: 0 },
-        Action { action: MOVE, actor: 0, target_x: 27, target_y: 0 },
-    ];
-    move = 1;
-    char_0 = chars[1][0].move(27, 0);
-    advances[1] = 27 - VIEW_DISTANCE;
+    let side = move as u1;
+    let other_side = (side as u8 + 1) as u1;
+    let chars_after = [ chars[side][0], chars[side][1].take_damage(ATTACK_RANGED, 50).take_damage(ATTACK_FIREBALL, 55), chars[side][2].take_damage(ATTACK_FIREBALL, 55), chars[side][3].take_damage(ATTACK_FIREBALL, 55), actor ];
+    let my_obstacles_serialized = Obstacle::serialize_obstacles(side, advances[other_side], obs[side]);
+    let current_hash = std::field::bytes32_to_field(get_data_hash(secrets[side].to_be_bytes(32), serialize_chars(chars_after).to_be_bytes(32), my_obstacles_serialized)); 
+
+    println(secrets[side]);
+    println(character::serialize_chars(chars[side]));
+    println(my_obstacles_serialized);
+    println(Action::serialize_actions(actions));
+    println(move);
+    println(advances[other_side]);
+    println(test_result_object_builder(chars[other_side], Obstacle::serialize_obstacles(other_side, advances[side], obs[other_side])));
+    println(Event::serialize_events(their_events));
+    println(advances[side]);
+    println(Event::serialize_events(my_events));
+    println(test_result_object_builder(chars_after, my_obstacles_serialized));
+    println(last_hashes[side]);
+    println(f"Current hash: {current_hash}");
     main(
-        9876543210,
-        character::serialize_chars(chars[1]),
-        Obstacle::serialize_obstacles(obs[1]),
+        secrets[side],
+        character::serialize_chars(chars[side]),
+        my_obstacles_serialized,
         Action::serialize_actions(actions),
         move,
-        advances[0],
-        [0, 0, 0, 0], // enemy objects
-        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // events
-        advances[1], // result advance
-        Event::serialize_events(&[ Event::empty(); MAX_EVENTS]).as_array(), // my result events (should)
-        test_result_object_builder([ char_0, chars[1][1], chars[1][2], chars[1][3], chars[1][4] ], Obstacle::serialize_obstacles(obs[1])), // my visible objects
-        last_hashes[1],
-        current_hashes[1]
+        advances[other_side],
+        test_result_object_builder(chars[other_side], Obstacle::serialize_obstacles(other_side, advances[side], obs[other_side])),
+        Event::serialize_events(their_events).as_array(),
+        advances[side],
+        Event::serialize_events(my_events).as_array(),
+        test_result_object_builder(chars_after, my_obstacles_serialized),
+        last_hashes[side],
+        current_hash
     );
-    chars[1][0] = char_0;
-    last_hashes[1] = current_hashes[1];
 }
