@@ -1,13 +1,13 @@
 use crate::MAX_OBSTACLES;
 use crate::{ HEIGHT, WIDTH };
 use crate::{ EMPTY, WALL, WATER };
-use crate::{ MAX_CHARACTERS, MAX_EVENTS };
-use crate::{ RECEIVE_ATTACK };
-use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
-use crate::{ SERIALIZED_OBSTACLE_BYTE_SIZE, SERIALIZED_OBSTACLES_PER_FIELD, SERIALIZED_OBSTACLES_ARRAY_SIZE };
+use crate::{ MAX_EVENTS }; // MAX_CHARACTERS
+// use crate::{ RECEIVE_ATTACK };
+// use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
+use crate::{ SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE, SERIALIZED_OBSTACLE_BYTE_SIZE, SERIALIZED_OBSTACLES_PER_FIELD, SERIALIZED_OBSTACLES_ARRAY_SIZE };
 use crate::NON_EMPTY_WALKABLE_TILE_MIN;
 use crate::event::Event;
-use crate::map::{ is_neighbor, is_visible };
+use crate::map::{ is_visible }; //is_neighbor
 use dep::std;
 
 struct Obstacle {
@@ -84,10 +84,11 @@ impl Obstacle {
         (self.x < WIDTH) & (self.y < HEIGHT)
     }
 
-    pub fn parse_their_obstacles<N>(serialized_obstacles: [Field; N]) -> [Obstacle] {
+    pub fn parse_their_obstacles(serialized_obstacles: [Field; SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE]) -> [Obstacle] {
         let mut obstacles: [Obstacle] = &[];
         for i in 0..serialized_obstacles.len() {
-            let serialized_obstacle_field = serialized_obstacles[i].to_be_bytes(32);
+            let serialized_obstacle_field: [u8; 32] = serialized_obstacles[i].to_be_bytes();
+            assert(serialized_obstacle_field.len() == 32);
             for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
                 let serialized_obstacle = [serialized_obstacle_field[2 + j * 3], serialized_obstacle_field[2 + j * 3 + 1], serialized_obstacle_field[2 + j * 3 + 2]];
                 let id = (i * SERIALIZED_OBSTACLES_PER_FIELD + j) as u8;
@@ -97,10 +98,11 @@ impl Obstacle {
         obstacles
     }
 
-    pub fn parse_my_obstacles<N>(serialized_obstacles: [Field; N], events: [Event; MAX_EVENTS]) -> [Obstacle] {
+    pub fn parse_my_obstacles(serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE], events: [Event; MAX_EVENTS]) -> [Obstacle] {
         let mut obstacles: [Obstacle] = &[];
         for i in 0..serialized_obstacles.len() {
-            let serialized_obstacle_field = serialized_obstacles[i].to_be_bytes(32);
+            let serialized_obstacle_field: [u8; 32] = serialized_obstacles[i].to_be_bytes();
+            assert(serialized_obstacle_field.len() == 32);
             for j in 0..SERIALIZED_OBSTACLES_PER_FIELD {
                 let serialized_obstacle = [serialized_obstacle_field[2 + j * 3], serialized_obstacle_field[2 + j * 3 + 1], serialized_obstacle_field[2 + j * 3 + 2]];
                 let id = (i * SERIALIZED_OBSTACLES_PER_FIELD + j) as u8;

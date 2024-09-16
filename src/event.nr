@@ -1,14 +1,14 @@
-use crate::{ NO_EVENT, SEE_MOVE, SEE_RITUAL, SEE_CAST, SEE_DRAW, SEE_SEARCH_TRAP, RECEIVE_ATTACK, TRIGGERED_TRAP, FOUND_TRAP };
-use crate::{ EMPTY, WALL };
-use crate::{ ATTACK_COUNT, CLASS_COUNT, EVENT_COUNT };
-use crate::{ ATTACK_MELEE, ATTACK_RANGED, ATTACK_FIREBALL };
+use crate::{ NO_EVENT, SEE_MOVE, RECEIVE_ATTACK, TRIGGERED_TRAP }; //, SEE_RITUAL, SEE_CAST, SEE_DRAW, SEE_SEARCH_TRAP, FOUND_TRAP
+// use crate::{ EMPTY, WALL };
+use crate::{ EVENT_COUNT };
+use crate::{ ATTACK_FIREBALL };
 use crate::{ SERIALIZED_EVENT_BYTE_SIZE, SERIALIZED_EVENTS_ARRAY_SIZE, SERIALIZED_EVENTS_PER_FIELD };
-use crate::{ WIDTH, HEIGHT, NOWHERE };
-use crate::{ MAX_CHARACTERS, MAX_EVENTS, MAX_TRAPS };
-use crate::TRAPS_BUFFER_MASK;
+use crate::{ WIDTH, NOWHERE };
+use crate::{ MAX_CHARACTERS, MAX_EVENTS }; //, MAX_TRAPS
+// use crate::TRAPS_BUFFER_MASK;
 use crate::UNREADABLE_BYTES_PER_FIELD;
-use crate::action::is_neighbor;
-use crate::character::Character;
+use crate::map::is_neighbor;
+// use crate::character::Character;
 use crate::character::{ get_attack_damage_to_tile, get_trap_damage_to_tile };
 use dep::std;
 
@@ -29,7 +29,8 @@ impl Event {
 
         let mut events: [Event; MAX_EVENTS] = [Event::empty(0); MAX_EVENTS];
         for i in 0..SERIALIZED_EVENTS_ARRAY_SIZE {
-            let split = fields[i].to_be_bytes(32);
+            let split: [u8; 32] = fields[i].to_be_bytes(); //.to_be_bytes<32>();
+            assert(split.len() == 32);
             for j in 0..SERIALIZED_EVENTS_PER_FIELD {
                 let offset = UNREADABLE_BYTES_PER_FIELD + j * SERIALIZED_EVENT_BYTE_SIZE;
                 events[i * SERIALIZED_EVENTS_PER_FIELD + j] = Event {
@@ -126,7 +127,7 @@ impl Event {
 
 pub fn build_std_event(event: u8, actor_id: u8, x: u8, y: u8) -> Event {
     assert(event < EVENT_COUNT);
-    assert((actor_id as u64) < MAX_CHARACTERS);
+    assert((actor_id as u32) < MAX_CHARACTERS);
     assert((x < WIDTH) | (x == NOWHERE));
     Event {
         event: event,

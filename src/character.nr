@@ -11,7 +11,7 @@ use crate::{ MAX_CHARACTERS, MAX_EVENTS, MAX_OBSTACLES };
 use crate::{ WIDTH_MASK, HEIGHT_MASK, CLASS_MASK, STATUS_MASK };
 use crate::{ WIDTH_BITS, HEIGHT_BITS, CLASS_BITS, STATUS_BITS };
 use crate::event::Event;
-use crate::{ WALL, WATER };
+use crate::{ WATER };
 use crate::map::is_visible;
 use crate::obstacle::Obstacle;
 
@@ -253,7 +253,8 @@ impl Character {
         assert(HEIGHT_BITS + STATUS_BITS <= 8);
         assert(WIDTH_BITS + 1 <= 8);
 
-        let split = data.to_be_bytes(32);
+        let split: [u8; 32] = data.to_be_bytes();
+        assert(split.len() == 32);
         let x_packed = split[2 + id * 6]; // 5 bit x, 3 bit class
         let y_packed = split[2 + id * 6 + 1]; // 4 bit y, 4 bit status
         let mut health = split[2 + id * 6 + 2] as u16;

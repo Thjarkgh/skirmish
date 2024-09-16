@@ -108,6 +108,7 @@ global MAX_OBSTACLES = 24;
 global MAX_CHARACTERS = 5;
 global SERIALIZED_OBSTACLE_BYTE_SIZE = 3;
 global SERIALIZED_OBSTACLES_ARRAY_SIZE = 3; // TODO: we take 3 because 3 x 8 = MAX_OBSTACLES ... should assert on this (MAX_OBSTACLES + MAX_CHARACTERS + 7) / 8;
+global SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE = SERIALIZED_OBSTACLES_ARRAY_SIZE + 1; // +1 because enemy characters are also serialized as obstacles
 global SERIALIZED_OBSTACLES_PER_FIELD = 8; // TODO: need to verify that SERIALIED_OBSTACLES_ARRAY_SIZE * SERIALIZED_OBSTACLES_PER_FIELD = MAX_OBSTACLES!
 global SERIALIZED_EVENT_BYTE_SIZE = 7;
 global SERIALIZED_EVENTS_ARRAY_SIZE = 1; // MAX_EVENTS / SERIALIZED_EVENTS_PER_FIELD => 4 / 4 = 1
@@ -135,12 +136,12 @@ fn main(
     move: pub u32,
     // Enemy Inputs
     enemy_advance: pub u8,
-    enemy_objects: pub [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1],
+    enemy_objects: pub [Field; SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE],
     events: pub [Field; SERIALIZED_EVENTS_ARRAY_SIZE], //MAX_EVENTS],
     // My Results
     my_advance: pub u8, // 1 bit win, 1 bit lose, 1 bit reserved, 5 bits advance
     my_result_events: pub [Field; SERIALIZED_EVENTS_ARRAY_SIZE],
-    my_result_objects: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1],
+    my_result_objects: [Field; SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE],
     // Gamestate Hashes
     gamestate_before_hash: pub Field,
     gamestate_after_hash: pub Field,
@@ -149,7 +150,11 @@ fn main(
     assert(SERIALIZED_EVENTS_PER_FIELD * SERIALIZED_EVENTS_ARRAY_SIZE == MAX_EVENTS);
     assert(SERIALIZED_OBSTACLES_PER_FIELD * SERIALIZED_OBSTACLES_ARRAY_SIZE == MAX_OBSTACLES);
 
-    let gamestate_before_hash_calculated = get_data_hash(secret.to_be_bytes(32), my_chars.to_be_bytes(32), my_obstacles);
+    let secret_be_bytes: [u8; 32] = secret.to_be_bytes();
+    assert(secret_be_bytes.len() == 32);
+    let my_chars_be_bytes: [u8; 32] = my_chars.to_be_bytes();
+    assert(my_chars_be_bytes.len() == 32);
+    let gamestate_before_hash_calculated = get_data_hash(secret_be_bytes, my_chars_be_bytes, my_obstacles);
     let gamestate_before_hash_calculated_field = std::field::bytes32_to_field(gamestate_before_hash_calculated);
     assert(gamestate_before_hash == gamestate_before_hash_calculated_field, f"{gamestate_before_hash} != {gamestate_before_hash_calculated_field}");
 
@@ -224,7 +229,9 @@ fn main(
     // println(secret);
     // println(serialized_characters);
     // println(serialized_obstacles);
-    let new_hash_bytes = get_data_hash(secret.to_be_bytes(32), serialized_characters.to_be_bytes(32), serialized_obstacles.as_array());
+    let serialized_characters_be_bytes: [u8; 32] = serialized_characters.to_be_bytes();
+    assert(serialized_characters_be_bytes.len() == 32);
+    let new_hash_bytes = get_data_hash(secret_be_bytes, serialized_characters_be_bytes, serialized_obstacles.as_array());
     let new_hash = std::field::bytes32_to_field(new_hash_bytes);
     let serialized_obstacles: [Field; SERIALIZED_OBSTACLES_ARRAY_SIZE + 1] = serialized_obstacles.push_back(serialize_chars_as_obstacles(my_chars)).as_array();
     for i in 0..my_result_objects.len() {
@@ -280,7 +287,7 @@ fn get_data_hash(secret: [u8], characters: [u8], obstacles: [Field; SERIALIZED_O
     }
     let offset = 32 + 32;
     for i in 0..SERIALIZED_OBSTACLES_ARRAY_SIZE {
-        let obstacle = obstacles[i].to_be_bytes(32);
+        let obstacle: [u8; 32] = obstacles[i].to_be_bytes();
         assert(obstacle.len() == 32);
         for j in 0..32 {
             data[offset + i * 32 + j] = obstacle[j];
@@ -347,7 +354,12 @@ fn test_helper_execute_move(move: u32, actor: Character, advances: [u8; 2], secr
     let other_side = (side as u8 + 1) as u1;
     let chars_after = test_helper_roster(actor, chars[side]);
     let my_obstacles_serialized = Obstacle::serialize_obstacles(side, advances[other_side], obs[side]);
-    let current_hash = std::field::bytes32_to_field(get_data_hash(secret[side].to_be_bytes(32), serialize_chars(chars_after).to_be_bytes(32), my_obstacles_serialized)); 
+    let secret_be_bytes: [u8; 32] = secret[side].to_be_bytes();
+    assert(secret_be_bytes.len() == 32);
+    let serialized_chars_after = serialize_chars(chars_after);
+    let serialized_chars_after_be_bytes: [u8; 32] = serialized_chars_after.to_be_bytes();
+    assert(serialized_chars_after_be_bytes.len() == 32);
+    let current_hash = std::field::bytes32_to_field(get_data_hash(secret_be_bytes, serialized_chars_after_be_bytes, my_obstacles_serialized)); 
 
     main(
         secret[side],
@@ -488,7 +500,12 @@ fn test_main_fireball_ff() {
     let other_side = (side as u8 + 1) as u1;
     let chars_after = [ chars[side][0], chars[side][1].take_damage(ATTACK_RANGED, 50).take_damage(ATTACK_FIREBALL, 55), chars[side][2].take_damage(ATTACK_FIREBALL, 55), chars[side][3].take_damage(ATTACK_FIREBALL, 55), actor ];
     let my_obstacles_serialized = Obstacle::serialize_obstacles(side, advances[other_side], obs[side]);
-    let current_hash = std::field::bytes32_to_field(get_data_hash(secrets[side].to_be_bytes(32), serialize_chars(chars_after).to_be_bytes(32), my_obstacles_serialized)); 
+    let secret_be_bytes: [u8; 32] = secrets[side].to_be_bytes();
+    assert(secret_be_bytes.len() == 32);
+    let serialized_chars_after = serialize_chars(chars_after);
+    let serialized_chars_after_be_bytes: [u8; 32] = serialized_chars_after.to_be_bytes();
+    assert(serialized_chars_after_be_bytes.len() == 32);
+    let current_hash = std::field::bytes32_to_field(get_data_hash(secret_be_bytes, serialized_chars_after_be_bytes, my_obstacles_serialized)); 
 
     println(secrets[side]);
     println(character::serialize_chars(chars[side]));
