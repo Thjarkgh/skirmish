@@ -10,16 +10,16 @@ use crate::event::Event;
 use crate::map::{ is_visible }; //is_neighbor
 use dep::std;
 
-struct Obstacle {
-    id: u8,
-    x: u8,             // 5 bit
-    y: u8,             // 4 bit
-    health: u8,        // 8 bit
-    obstacle_type: u8, // 4 bit
+pub struct Obstacle {
+    pub id: u8,
+    pub x: u8,             // 5 bit
+    pub y: u8,             // 4 bit
+    pub health: u8,        // 8 bit
+    pub obstacle_type: u8, // 4 bit
 }
 
-impl Obstacle {
-    fn serialize(self) -> [u8; SERIALIZED_OBSTACLE_BYTE_SIZE] {
+pub impl Obstacle {
+    pub fn serialize(self) -> [u8; SERIALIZED_OBSTACLE_BYTE_SIZE] {
         assert(SERIALIZED_OBSTACLE_BYTE_SIZE == 3, f"Obstacle byte size is not 3");
         assert(self.y < 0x10, f"Obstacle y is too large");
         assert(self.obstacle_type < 0x10, f"Obstacle type is too large");
@@ -28,11 +28,11 @@ impl Obstacle {
         [ self.x, packed_y, self.health]
     }
 
-    fn is_traversible(self) -> bool {
+    pub fn is_traversible(self) -> bool {
         (self.obstacle_type >= NON_EMPTY_WALKABLE_TILE_MIN) | (self.obstacle_type == EMPTY)
     }
 
-    fn parse_theirs(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE]) -> Obstacle {
+    pub fn parse_theirs(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE]) -> Obstacle {
         assert(SERIALIZED_OBSTACLE_BYTE_SIZE == 3, f"Obstacle byte size is not 3");
         //assert((id as u64) >= MAX_CHARACTERS, f"Obstacle id is lower than minimum {id}");
         let x = field[0];
@@ -50,7 +50,7 @@ impl Obstacle {
         o
     }
 
-    fn parse(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE], events: [Event; MAX_EVENTS]) -> Obstacle {
+    pub fn parse(id: u8, field: [u8; SERIALIZED_OBSTACLE_BYTE_SIZE], events: [Event; MAX_EVENTS]) -> Obstacle {
         assert(SERIALIZED_OBSTACLE_BYTE_SIZE == 3, f"Obstacle byte size is not 3");
         //assert((id as u64) >= MAX_CHARACTERS, f"Obstacle id is lower than minimum {id}");
         let x = field[0];
@@ -80,7 +80,7 @@ impl Obstacle {
         o
     }
 
-    fn is_valid(self) -> bool {
+    pub fn is_valid(self) -> bool {
         (self.x < WIDTH) & (self.y < HEIGHT)
     }
 

@@ -14,14 +14,14 @@ use crate::map::{ is_neighbor, is_visible };
 use crate::obstacle::Obstacle;
 use dep::std;
 
-struct Action {
-    action: u8,
-    actor: u8,
-    target_x: u8,
-    target_y: u8,
+pub struct Action {
+    pub action: u8,
+    pub actor: u8,
+    pub target_x: u8,
+    pub target_y: u8,
 }
 // TODO: action type as global struct & impl
-impl Action {
+pub impl Action {
     pub fn parse_actions(fields: [Field; SERIALIZED_ACTIONS_ARRAY_SIZE]) -> [Action; MAX_ACTIONS] {
         assert(UNREADABLE_BYTES_PER_FIELD + SERIALIZED_ACTIONS_PER_FIELD * SERIALIZED_ACTION_BYTE_SIZE <= 32);
         assert(SERIALIZED_ACTIONS_ARRAY_SIZE * SERIALIZED_ACTIONS_PER_FIELD == MAX_ACTIONS);
@@ -86,7 +86,7 @@ impl Action {
     //     self.action as Field + (self.actor as Field) * 0x100 + (self.target_x as Field) * 0x10000 + (self.target_y as Field) * 0x1000000
     // }
 
-    fn execute(self, side: u1, enemy_advance: u8, c: Character, mut energy: u8, my_obstacles_parsed: [Obstacle; MAX_OBSTACLES], their_obstacles: [Obstacle]) -> (Event, Character, u8) {
+    pub fn execute(self, side: u1, enemy_advance: u8, c: Character, mut energy: u8, my_obstacles_parsed: [Obstacle; MAX_OBSTACLES], their_obstacles: [Obstacle]) -> (Event, Character, u8) {
         // WAIT: Do nothing
 
         let mut result_event: Event = build_std_event(NO_EVENT, c.id, 0, 0);

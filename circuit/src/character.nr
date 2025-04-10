@@ -16,26 +16,26 @@ use crate::map::is_visible;
 use crate::obstacle::Obstacle;
 
 // this should be more efficient: for all the following: order is: UNKNOWN_CLASS, ARCHER, RITUALIST, ROGUE, KNIGHT, MAGE
-global class_damage_melee = [ 0, 32, 8, 24, 40, 16 ];
-global class_damage_ranged = [ 0, 24, 40, 16, 32, 8 ];
-global class_damage_fireball = [ 0, 0, 100, 50, 0, 100 ];
-global class_damage = [ class_damage_melee, class_damage_ranged, class_damage_fireball ];
-global class_energy_per_attack = [ 0, 7, 7, 7, 6, 7 ];
-global class_energy_per_cast = [ 0, 255, 12, 255, 255, 6 ];
-global class_energy_per_disarm = [ 0, 255, 255, 12, 255, 255 ];
-global class_energy_per_move = [ 0, 3, 4, 3, 4, 4 ];
-global class_energy_per_ritual = [ 0, 255, 12, 255, 255, 255 ];
-global class_energy_per_search = [ 0, 255, 255, 6, 255, 255 ];
-global class_energy_per_sneak = [ 0, 255, 255, 6, 255, 255 ];
-global class_energy_per_draw = [ 0, 9, 255, 255, 255, 255 ];
-global class_energy_per_shoot = [ 0, 6, 255, 255, 255, 255 ];
-global resistances = [
+global class_damage_melee: [u8; 6] = [ 0, 32, 8, 24, 40, 16 ];
+global class_damage_ranged: [u8; 6] = [ 0, 24, 40, 16, 32, 8 ];
+global class_damage_fireball: [u8; 6] = [ 0, 0, 100, 50, 0, 100 ];
+global class_damage: [[u8; 6]; 3] = [ class_damage_melee, class_damage_ranged, class_damage_fireball ];
+global class_energy_per_attack: [u8; 6] = [ 0, 7, 7, 7, 6, 7 ];
+global class_energy_per_cast: [u8; 6] = [ 0, 255, 12, 255, 255, 6 ];
+global class_energy_per_disarm: [u8; 6] = [ 0, 255, 255, 12, 255, 255 ];
+global class_energy_per_move: [u8; 6] = [ 0, 3, 4, 3, 4, 4 ];
+global class_energy_per_ritual: [u8; 6] = [ 0, 255, 12, 255, 255, 255 ];
+global class_energy_per_search: [u8; 6] = [ 0, 255, 255, 6, 255, 255 ];
+global class_energy_per_sneak: [u8; 6] = [ 0, 255, 255, 6, 255, 255 ];
+global class_energy_per_draw: [u8; 6] = [ 0, 9, 255, 255, 255, 255 ];
+global class_energy_per_shoot: [u8; 6] = [ 0, 6, 255, 255, 255, 255 ];
+global resistances: [[u16; 8]; 3] = [
     [ 0,  75, 100, 85,  50, 100, 20,  0 ], // Melee vs dummy, archer, ritualist, thief, knight, mage, wall, water
     [ 0,  80, 100, 90,  25, 100,  5,  0 ], // Ranged vs dummy, archer, ritualist, thief, knight, mage, wall, water
     [ 0,  80, 100, 90, 100,  90, 60, 50 ], // Fireball vs dummy, archer, ritualist, thief, knight, mage, wall, water
 ];
 
-global trap_resistances = [ 0,  75, 100, 50,  75, 90, 5, 0 ]; // Trap vs dummy, archer, ritualist, thief, knight, mage
+global trap_resistances: [u16; 8] = [ 0,  75, 100, 50,  75, 90, 5, 0 ]; // Trap vs dummy, archer, ritualist, thief, knight, mage
 
 // struct CharacterClass {
 //     class: u8,
@@ -49,18 +49,18 @@ global trap_resistances = [ 0,  75, 100, 50,  75, 90, 5, 0 ]; // Trap vs dummy, 
 //     energy_per_sneak: u8,
 // }
 
-struct Character {
-    id: u8,
-    x: u8, // 5 bit
-    y: u8, // 4 bit
-    class: u8, // 3 bit
-    status: u8, // 0 = idle, 1-15 = continuing action => 4 bit
-    health: u8,
-    has_been_seen: bool,
-    is_hidden: u1,
-    target_x: u8,
-    target_y: u8,
-    damage_mod: u8,
+pub struct Character {
+    pub id: u8,
+    pub x: u8, // 5 bit
+    pub y: u8, // 4 bit
+    pub class: u8, // 3 bit
+    pub status: u8, // 0 = idle, 1-15 = continuing action => 4 bit
+    pub health: u8,
+    pub has_been_seen: bool,
+    pub is_hidden: u1,
+    pub target_x: u8,
+    pub target_y: u8,
+    pub damage_mod: u8,
 }
 
 impl Character {

@@ -11,112 +11,113 @@ mod map;
 use dep::std;
 
 // MAP
-global WIDTH_BITS = 5;
-global WIDTH_MASK = (1 << WIDTH_BITS) - 1 as u8;
-global WIDTH = 1 << WIDTH_BITS;
-global HEIGHT_BITS = 4;
-global HEIGHT_MASK = (1 << HEIGHT_BITS) - 1 as u8;
-global HEIGHT = 10;
-global NOWHERE = 255;
+global WIDTH_BITS: u8 = 5;
+global WIDTH_MASK: u8 = (1 << WIDTH_BITS) - 1;
+global WIDTH: u8 = 1 << WIDTH_BITS;
+global HEIGHT_BITS: u8 = 4;
+global HEIGHT_MASK: u8 = (1 << HEIGHT_BITS) - 1;
+global HEIGHT: u8 = 10;
+global NOWHERE: u8 = 255;
 
 // CLASSES
-global UNKNOWN_CLASS = 0 as u8;
-global ARCHER = 1 as u8;
-global RITUALIST = 2 as u8;
-global ROGUE = 3 as u8;
-global KNIGHT = 4 as u8;
-global MAGE = 5 as u8;
-global CLASS_BITS = 3;
-global CLASS_MASK = (1 << CLASS_BITS) - 1 as u8;
-global CLASS_COUNT = 6 as u8;
+global UNKNOWN_CLASS: u8 = 0;
+global ARCHER: u8 = 1;
+global RITUALIST: u8 = 2;
+global ROGUE: u8 = 3;
+global KNIGHT: u8 = 4;
+global MAGE: u8 = 5;
+global CLASS_BITS: u8 = 3;
+global CLASS_MASK: u8 = (1 << CLASS_BITS) - 1;
+global CLASS_COUNT: u8 = 6;
 
 // ACTIONS
-global WAIT = 0 as u8;
-global SNEAK = 1 as u8;
-global MOVE = 2 as u8;          // => SEE_COLUMN (depr: MOVE)
-global RITUAL = 3 as u8;        // => SEE_RITUAL | WIN
-global SEARCH = 4 as u8;        // => SEE_SEARCH_TRAP
-global ATTACK = 5 as u8;        // => RECEIVE_ATTACK | DESTROY // affects my obstacles; TODO: with more attack types might also affect other own characters
-global SET_TRAP = 6 as u8;
-global CAST_FIREBALL = 7 as u8; // => SEE_CAST | SEE_SPELL | DESTROY // affects other characters if status == FIREBALL_ROUNDS_FOR_CAST
-global DRAW = 8 as u8;          // => SEE_DRAW
-global SHOOT = 9 as u8;         // => RECEIVE_ATTACK
-//global TRIGGER_TRAP = 9 as u8;  // => TRIGGERED_TRAP ?????????
-global DISARM_TRAP = 10 as u8;  // => DESTROY
-global ACTION_COUNT = 11 as u8;
+global WAIT: u8 = 0;
+global SNEAK: u8 = 1;
+global MOVE: u8 = 2;          // => SEE_COLUMN (depr: MOVE)
+global RITUAL: u8 = 3;        // => SEE_RITUAL | WIN
+global SEARCH: u8 = 4;        // => SEE_SEARCH_TRAP
+global ATTACK: u8 = 5;        // => RECEIVE_ATTACK | DESTROY // affects my obstacles; TODO: with more attack types might also affect other own characters
+global SET_TRAP: u8 = 6;
+global CAST_FIREBALL: u8 = 7; // => SEE_CAST | SEE_SPELL | DESTROY // affects other characters if status == FIREBALL_ROUNDS_FOR_CAST
+global DRAW: u8 = 8;          // => SEE_DRAW
+global SHOOT: u8 = 9;         // => RECEIVE_ATTACK
+//global TRIGGER_TRAP = 9;  // => TRIGGERED_TRAP ?????????
+global DISARM_TRAP: u8 = 10;  // => DESTROY
+global ACTION_COUNT: u8 = 11;
 
 // EVENTS
-global NO_EVENT = 0  as u8;
-global DESTROY = 1 as u8;          // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client //use coordinates to determine tile or trap that got destroyed and update map
-//global DISCOVER = 2 as u8;         // actor_id = their_char or their_object when receive - handle to update enemy positions, got health & class (this is for all chars, not just the active one)
-//global SEE_COLUMN = 2  as u8;      // y = the column the player sees => update objects list
-global SEE_MOVE = 3  as u8;        // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client //handle to update enemy positions => DISCOVER
-//global SEE_SPELL = 4  as u8;       // actor_id = their_char when receive - need to handle effect via coordinates, => RECEIVE_DAMAGE | DESTROY | LOSE // also need to handle my obstacles
-global SEE_SEARCH_TRAP = 5  as u8; // actor_id = their_char when receive - need to create found trap event if there is a trap nearby => FOUND_TRAP
-global SEE_RITUAL = 6  as u8;      // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
-global SEE_CAST = 7 as u8;         // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
-global SEE_DRAW = 8 as u8;         // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
-//global RECEIVE_DAMAGE = 9 as u8;   // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client
-global RECEIVE_ATTACK = 10 as u8;  // actor_id = 0 when receive - need to handle damage => // no need to events ... health of visible assets gets sent anyway and invisible ones will be updated during discovery //RECEIVE_DAMAGE | DESTROY | LOSE // also need to handle in my obstacles
-global TRIGGERED_TRAP = 11 as u8;  // actor_id = my_char when receive - need to handle damage (for now, later on we might want to handle other effects as well) => RECEIVE_DAMAGE
-global FOUND_TRAP = 12 as u8;      // actor_id = my_char when receive - no need to handle, only important to have on-chain for the client
-global WIN = 13 as u8;
-global LOSE = 14 as u8;
-global EVENT_COUNT = 15 as u8;
+global NO_EVENT: u8 = 0 ;
+global DESTROY: u8 = 1;          // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client //use coordinates to determine tile or trap that got destroyed and update map
+//global DISCOVER = 2;         // actor_id = their_char or their_object when receive - handle to update enemy positions, got health & class (this is for all chars, not just the active one)
+//global SEE_COLUMN = 2 ;      // y = the column the player sees => update objects list
+global SEE_MOVE: u8 = 3 ;        // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client //handle to update enemy positions => DISCOVER
+//global SEE_SPELL = 4 ;       // actor_id = their_char when receive - need to handle effect via coordinates, => RECEIVE_DAMAGE | DESTROY | LOSE // also need to handle my obstacles
+global SEE_SEARCH_TRAP: u8 = 5 ; // actor_id = their_char when receive - need to create found trap event if there is a trap nearby => FOUND_TRAP
+global SEE_RITUAL: u8 = 6 ;      // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
+global SEE_CAST: u8 = 7;         // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
+global SEE_DRAW: u8 = 8;         // actor_id = their_char when receive - no need to handle, only important to have on-chain for the client
+//global RECEIVE_DAMAGE = 9;   // actor_id = their_char or their_object when receive - no need to handle, only important to have on-chain for the client
+global RECEIVE_ATTACK: u8 = 10;  // actor_id = 0 when receive - need to handle damage => // no need to events ... health of visible assets gets sent anyway and invisible ones will be updated during discovery //RECEIVE_DAMAGE | DESTROY | LOSE // also need to handle in my obstacles
+global TRIGGERED_TRAP: u8 = 11;  // actor_id = my_char when receive - need to handle damage (for now, later on we might want to handle other effects as well) => RECEIVE_DAMAGE
+global FOUND_TRAP: u8 = 12;      // actor_id = my_char when receive - no need to handle, only important to have on-chain for the client
+global WIN: u8 = 13;
+global LOSE: u8 = 14;
+global EVENT_COUNT: u8 = 15;
 
 // ATTACKS
-global ATTACK_MELEE = 0 as u8;
-global ATTACK_RANGED = 1 as u8;
-global ATTACK_FIREBALL = 2 as u8;
-global ATTACK_COUNT = 3 as u8;
+global ATTACK_MELEE: u8 = 0;
+global ATTACK_RANGED: u8 = 1;
+global ATTACK_FIREBALL: u8 = 2;
+global ATTACK_COUNT: u8 = 3;
 // TODO: instead of enum, use a global array of structs with damage, range, etc.
 
 
 // TILES
-global EMPTY = 0 as u8;
-global WALL = 6 as u8;
-global WATER = 7 as u8;
-global UNKNOWN_CLASS_TILE = 8 as u8;
-global NON_EMPTY_WALKABLE_TILE_MIN = 9 as u8;
-global FLAG = 9 as u8;
-global TRAP = 10 as u8;
-global TRAP_USED = 11 as u8;
-global TRAP_FOUND = 12 as u8;
-global BODY = 13 as u8;
-global BODY_LOOTED = 14 as u8;
-global FOG = 15 as u8;
-global TILE_COUNT = 16 as u8;
+global EMPTY: u8 = 0;
+global WALL: u8 = 6;
+global WATER: u8 = 7;
+global UNKNOWN_CLASS_TILE: u8 = 8;
+global NON_EMPTY_WALKABLE_TILE_MIN: u8 = 9;
+global FLAG: u8 = 9;
+global TRAP: u8 = 10;
+global TRAP_USED: u8 = 11;
+global TRAP_FOUND: u8 = 12;
+global BODY: u8 = 13;
+global BODY_LOOTED: u8 = 14;
+global FOG: u8 = 15;
+global TILE_COUNT: u8 = 16;
 
 // STATUS
-global RITUAL_ROUNDS_FOR_WIN = 16 as u8;
-global FIREBALL_ROUNDS_FOR_CAST = 3 as u8;
-global DRAW_ROUNDS_FOR_SHOOT = 1 as u8;
-global MIN_DRAW_ROUNDS_FOR_SHOOT = 1 as u8;
-global MAX_DRAW_ROUNDS_FOR_SHOOT = 3 as u8;
-global STATUS_BITS = 4;
-global STATUS_MASK = (1 << STATUS_BITS) - 1 as u8;
-global STATUS_COUNT = 16  as u8; // just to be more in line with the other constants, actually used as a counter
+#[export]
+global RITUAL_ROUNDS_FOR_WIN: u8 = 16;
+global FIREBALL_ROUNDS_FOR_CAST: u8 = 3;
+global DRAW_ROUNDS_FOR_SHOOT: u8 = 1;
+global MIN_DRAW_ROUNDS_FOR_SHOOT: u8 = 1;
+global MAX_DRAW_ROUNDS_FOR_SHOOT: u8 = 3;
+global STATUS_BITS: u8 = 4;
+global STATUS_MASK: u8 = (1 << STATUS_BITS) - 1;
+global STATUS_COUNT: u8 = 16 ; // just to be more in line with the other constants, actually used as a counter
 
 // GAMEPLAY
-global VIEW_DISTANCE = 6;
-global MAX_TRAPS = 15; // note: only lowest bit of first byte of field is usable! => ! Field = 1 bit + 31 bytes!
-global TRAPS_BUFFER_SIZE = 16;
-global TRAPS_BUFFER_MASK = 15; // has to be 2^n - 1
-global MAX_ACTIONS = 4;
-global MAX_EVENTS = 4; // = MAX_ACTIONS // NO! handle traps in a different way (by passing as argument!)+ 4 (2 FOUND_TRAP + WIN/LOSE + 1 reserved)
-global MAX_OBSTACLES = 24;
-global MAX_CHARACTERS = 5;
-global SERIALIZED_OBSTACLE_BYTE_SIZE = 3;
-global SERIALIZED_OBSTACLES_ARRAY_SIZE = 3; // TODO: we take 3 because 3 x 8 = MAX_OBSTACLES ... should assert on this (MAX_OBSTACLES + MAX_CHARACTERS + 7) / 8;
-global SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE = SERIALIZED_OBSTACLES_ARRAY_SIZE + 1; // +1 because enemy characters are also serialized as obstacles
-global SERIALIZED_OBSTACLES_PER_FIELD = 8; // TODO: need to verify that SERIALIED_OBSTACLES_ARRAY_SIZE * SERIALIZED_OBSTACLES_PER_FIELD = MAX_OBSTACLES!
-global SERIALIZED_EVENT_BYTE_SIZE = 7;
-global SERIALIZED_EVENTS_ARRAY_SIZE = 1; // MAX_EVENTS / SERIALIZED_EVENTS_PER_FIELD => 4 / 4 = 1
-global SERIALIZED_EVENTS_PER_FIELD = 4; // 31 / 7 = 4
-global SERIALIZED_ACTION_BYTE_SIZE = 5;
-global SERIALIZED_ACTIONS_ARRAY_SIZE = 1;
-global SERIALIZED_ACTIONS_PER_FIELD = 4; // could be up to 6, but we only use 4
-global UNREADABLE_BYTES_PER_FIELD = 1;
+global VIEW_DISTANCE: u8 = 6;
+global MAX_TRAPS: Field = 15; // note: only lowest bit of first byte of field is usable! => ! Field = 1 bit + 31 bytes!
+global TRAPS_BUFFER_SIZE: Field = 16;
+global TRAPS_BUFFER_MASK: Field = 15; // has to be 2^n - 1
+global MAX_ACTIONS: u32 = 4;
+global MAX_EVENTS: u32 = 4; // = MAX_ACTIONS // NO! handle traps in a different way (by passing as argument!)+ 4 (2 FOUND_TRAP + WIN/LOSE + 1 reserved)
+global MAX_OBSTACLES: u32 = 24;
+global MAX_CHARACTERS: u32 = 5;
+global SERIALIZED_OBSTACLE_BYTE_SIZE: u32 = 3;
+global SERIALIZED_OBSTACLES_ARRAY_SIZE: u32 = 3; // TODO: we take 3 because 3 x 8 = MAX_OBSTACLES ... should assert on this (MAX_OBSTACLES + MAX_CHARACTERS + 7) / 8;
+global SERIALIZED_ENEMY_OBSTACLES_ARRAY_SIZE: u32 = SERIALIZED_OBSTACLES_ARRAY_SIZE + 1; // +1 because enemy characters are also serialized as obstacles
+global SERIALIZED_OBSTACLES_PER_FIELD: u32 = 8; // TODO: need to verify that SERIALIED_OBSTACLES_ARRAY_SIZE * SERIALIZED_OBSTACLES_PER_FIELD = MAX_OBSTACLES!
+global SERIALIZED_EVENT_BYTE_SIZE: u32 = 7;
+global SERIALIZED_EVENTS_ARRAY_SIZE: u32 = 1; // MAX_EVENTS / SERIALIZED_EVENTS_PER_FIELD => 4 / 4 = 1
+global SERIALIZED_EVENTS_PER_FIELD: u32 = 4; // 31 / 7 = 4
+global SERIALIZED_ACTION_BYTE_SIZE: u32 = 5;
+global SERIALIZED_ACTIONS_ARRAY_SIZE: u32 = 1;
+global SERIALIZED_ACTIONS_PER_FIELD: u32 = 4; // could be up to 6, but we only use 4
+global UNREADABLE_BYTES_PER_FIELD: u32 = 1;
 
 fn get_actor_from_move(mut move: u32) -> u8 {
     if (move % 2) == 1 {

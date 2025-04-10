@@ -12,13 +12,13 @@ use crate::map::is_neighbor;
 use crate::character::{ get_attack_damage_to_tile, get_trap_damage_to_tile };
 use dep::std;
 
-struct Event {
-    event: u8,
-    actor_id: u8,
-    subtype: u8,
-    x: u8,
-    y: u8,
-    value: u8,
+pub struct Event {
+    pub event: u8,
+    pub actor_id: u8,
+    pub subtype: u8,
+    pub x: u8,
+    pub y: u8,
+    pub value: u8,
 }
 
 impl Event {
